@@ -10,6 +10,7 @@ class SnakeRoyaleGame {
         
         this.initializeSocket();
         this.setupKeyboardControls();
+        this.setupTouchControls();
     }
     
     initializeSocket() {
@@ -79,6 +80,53 @@ class SnakeRoyaleGame {
                     break;
             }
         });
+    }
+    
+    setupTouchControls() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 30; // Minimum distance for a swipe to register
+        
+        // Add touch event listeners to the document for global swipe detection
+        document.addEventListener('touchstart', (event) => {
+            touchStartX = event.changedTouches[0].screenX;
+            touchStartY = event.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        document.addEventListener('touchend', (event) => {
+            touchEndX = event.changedTouches[0].screenX;
+            touchEndY = event.changedTouches[0].screenY;
+            
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            const absDeltaX = Math.abs(deltaX);
+            const absDeltaY = Math.abs(deltaY);
+            
+            // Only process swipe if it's long enough and the game is active
+            if (this.canvas && (absDeltaX > minSwipeDistance || absDeltaY > minSwipeDistance)) {
+                // Determine swipe direction (prioritize the axis with larger movement)
+                if (absDeltaX > absDeltaY) {
+                    // Horizontal swipe
+                    if (deltaX > 0) {
+                        this.changeDirection(1, 0); // Right
+                    } else {
+                        this.changeDirection(-1, 0); // Left
+                    }
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0) {
+                        this.changeDirection(0, 1); // Down
+                    } else {
+                        this.changeDirection(0, -1); // Up
+                    }
+                }
+                
+                // Prevent default behavior for processed swipes
+                event.preventDefault();
+            }
+        }, { passive: false });
     }
     
     // Generate or retrieve a persistent device ID

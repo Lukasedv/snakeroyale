@@ -195,10 +195,11 @@
             <canvas id="gameCanvas" width="800" height="600"></canvas>
             
             <div class="controls">
-                <button class="control-btn" ontouchstart="changeDirection(0, -1)" onclick="changeDirection(0, -1)">↑</button>
-                <button class="control-btn" ontouchstart="changeDirection(-1, 0)" onclick="changeDirection(-1, 0)">←</button>
-                <button class="control-btn" ontouchstart="changeDirection(1, 0)" onclick="changeDirection(1, 0)">→</button>
-                <button class="control-btn" ontouchstart="changeDirection(0, 1)" onclick="changeDirection(0, 1)">↓</button>
+                <div></div> <!-- Spacer for grid layout -->
+                <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(0, -1)" onclick="changeDirection(0, -1)">↑</button>
+                <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(-1, 0)" onclick="changeDirection(-1, 0)">←</button>
+                <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(1, 0)" onclick="changeDirection(1, 0)">→</button>
+                <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(0, 1)" onclick="changeDirection(0, 1)">↓</button>
             </div>
         </div>
         
