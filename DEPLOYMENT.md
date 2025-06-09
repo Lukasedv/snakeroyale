@@ -65,12 +65,19 @@ Add these secrets from the ACR credentials:
 
 ## Step 3: Deploy Using GitHub Actions
 
-1. Push your code to the `main` branch
+1. Push your code to the `main` branch for production deployment
 2. The GitHub Action will automatically:
    - Build the Docker image
    - Push it to Azure Container Registry
-   - Deploy to Azure Container Instances
+   - Deploy to Azure Container Instances with stable production URL
    - Provide the deployment URL
+
+For development testing:
+1. Create a pull request against the `main` branch
+2. The GitHub Action will automatically:
+   - Deploy to a separate development container instance
+   - Use a PR-specific URL for testing
+   - Allow testing before merging to production
 
 ## Step 4: Manual Deployment (Alternative)
 
@@ -89,19 +96,40 @@ docker push YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest
 ```
 
 ### 4.2 Deploy to Container Instances
+
+For production deployment:
 ```bash
 az container create \
   --resource-group snake-royale-rg \
-  --name snake-royale-ci \
+  --name snake-royale-prod-ci \
   --image YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest \
   --registry-login-server YOUR_REGISTRY_NAME.azurecr.io \
   --registry-username [ACR_USERNAME] \
   --registry-password [ACR_PASSWORD] \
-  --dns-name-label snake-royale-unique \
+  --dns-name-label snake-royale-prod \
   --ports 3000 \
   --cpu 2 \
   --memory 4 \
   --environment-variables PORT=3000 NODE_ENV=production \
+  --restart-policy Always \
+  --location swedencentral \
+  --os-type Linux
+```
+
+For development/testing deployment:
+```bash
+az container create \
+  --resource-group snake-royale-rg \
+  --name snake-royale-dev-ci \
+  --image YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest \
+  --registry-login-server YOUR_REGISTRY_NAME.azurecr.io \
+  --registry-username [ACR_USERNAME] \
+  --registry-password [ACR_PASSWORD] \
+  --dns-name-label snake-royale-dev-test \
+  --ports 3000 \
+  --cpu 2 \
+  --memory 4 \
+  --environment-variables PORT=3000 NODE_ENV=development \
   --restart-policy Always \
   --location swedencentral \
   --os-type Linux
@@ -165,31 +193,63 @@ az containerapp create \
 ## Step 8: Monitoring and Maintenance
 
 ### View Logs
+Production:
 ```bash
-az container logs --resource-group snake-royale-rg --name snake-royale-ci
+az container logs --resource-group snake-royale-rg --name snake-royale-prod-ci
+```
+
+Development:
+```bash
+az container logs --resource-group snake-royale-rg --name snake-royale-dev-ci
 ```
 
 ### Check Status
+Production:
 ```bash
-az container show --resource-group snake-royale-rg --name snake-royale-ci --query "{Status:instanceView.state,IP:ipAddress.ip,FQDN:ipAddress.fqdn}"
+az container show --resource-group snake-royale-rg --name snake-royale-prod-ci --query "{Status:instanceView.state,IP:ipAddress.ip,FQDN:ipAddress.fqdn}"
+```
+
+Development:
+```bash
+az container show --resource-group snake-royale-rg --name snake-royale-dev-ci --query "{Status:instanceView.state,IP:ipAddress.ip,FQDN:ipAddress.fqdn}"
 ```
 
 ### Update Deployment
+Production:
 ```bash
 az container update \
   --resource-group snake-royale-rg \
-  --name snake-royale-ci \
+  --name snake-royale-prod-ci \
+  --image snakeregistry.azurecr.io/snakeroyale:latest
+```
+
+Development:
+```bash
+az container update \
+  --resource-group snake-royale-rg \
+  --name snake-royale-dev-ci \
   --image snakeregistry.azurecr.io/snakeroyale:latest
 ```
 
 ## Step 9: Clean Up Resources
 
-To avoid ongoing charges, delete resources when not needed:
-```bash
-# Stop the container
-az container stop --resource-group snake-royale-rg --name snake-royale-ci
+To avoid ongoing charges, stop containers when not needed:
 
-# Delete the entire resource group (WARNING: This deletes everything)
+### Stop containers individually:
+```bash
+# Stop production container
+az container stop --resource-group snake-royale-rg --name snake-royale-prod-ci
+
+# Stop development container  
+az container stop --resource-group snake-royale-rg --name snake-royale-dev-ci
+
+# Delete containers individually
+az container delete --resource-group snake-royale-rg --name snake-royale-prod-ci --yes
+az container delete --resource-group snake-royale-rg --name snake-royale-dev-ci --yes
+```
+
+### Delete entire resource group (WARNING: This deletes everything):
+```bash
 az group delete --name snake-royale-rg --yes --no-wait
 ```
 

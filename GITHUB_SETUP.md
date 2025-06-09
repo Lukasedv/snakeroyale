@@ -62,31 +62,53 @@ YOUR_REGISTRY_PASSWORD
 
 Once you've added these secrets, the GitHub Action will:
 
-1. **Trigger**: On every push to the `main` branch
-2. **Build**: Install dependencies and run tests
-3. **Docker**: Build and push Docker image to Azure Container Registry
-4. **Deploy**: Update the Azure Container Instance with the new image
-5. **Output**: Provide the deployment URL in the action logs
+1. **Trigger**: On every push to the `main` branch or pull request
+2. **Environment Setup**: Determines deployment environment (production vs development)
+3. **Build**: Install dependencies and run tests
+4. **Docker**: Build and push Docker image to Azure Container Registry
+5. **Deploy**: Deploy to appropriate Azure Container Instance
+   - **Main branch**: Deploys to production with stable URL
+   - **Pull requests**: Deploys to development environment with PR-specific URL
+6. **Output**: Provide the deployment URL in the action logs
+
+### Deployment Environments
+
+- **Production**: Deployed on push to main branch with stable DNS name
+- **Development**: Deployed for pull requests with unique DNS name per PR
 
 ## Testing the Pipeline
 
 1. Make a small change to your code (e.g., update a comment in `server.js`)
-2. Commit and push to the `main` branch:
+2. Commit and push to the `main` branch for production deployment:
    ```bash
    git add .
    git commit -m "Test CI/CD pipeline"
    git push origin main
    ```
-3. Go to GitHub → Actions tab to watch the deployment
-4. The action will provide the deployment URL when complete
+3. Or create a pull request for development testing:
+   ```bash
+   git checkout -b feature/test-deployment
+   git add .
+   git commit -m "Test dev deployment"
+   git push origin feature/test-deployment
+   # Then create a PR via GitHub UI
+   ```
+4. Go to GitHub → Actions tab to watch the deployment
+5. The action will provide the deployment URL when complete
 
 ## Current Deployment URLs
 
-- **Game**: http://snake-royale-sweden.swedencentral.azurecontainer.io:3000
-- **Spectator**: http://snake-royale-sweden.swedencentral.azurecontainer.io:3000/spectator.html
+### Production Environment (main branch)
+- **Game**: http://snake-royale-prod.swedencentral.azurecontainer.io:3000
+- **Spectator**: http://snake-royale-prod.swedencentral.azurecontainer.io:3000/spectator.html
 
-After each deployment, the URL will update with a new run number:
-- Example: `http://snake-royale-123.swedencentral.azurecontainer.io:3000`
+**Note**: Production URLs remain stable across deployments.
+
+### Development Environment (pull requests)
+- **Game**: http://snake-royale-dev-pr-[NUMBER].swedencentral.azurecontainer.io:3000
+- **Spectator**: http://snake-royale-dev-pr-[NUMBER].swedencentral.azurecontainer.io:3000/spectator.html
+
+**Note**: Development URLs are unique per PR and automatically cleaned up.
 
 ## Troubleshooting
 

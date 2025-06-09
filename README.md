@@ -40,6 +40,12 @@ npm start
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive Azure deployment guide.
 
+#### Live Deployment URLs
+- **Production** (stable): http://snake-royale-prod.swedencentral.azurecontainer.io:3000
+- **Development** (PR testing): http://snake-royale-dev-pr-[NUMBER].swedencentral.azurecontainer.io:3000
+
+The production URL remains consistent across deployments, while development URLs are created for each pull request to enable testing before merging.
+
 ## 🎯 How to Play
 
 1. **Join the Game**: Enter your name and click "Join Battle"
