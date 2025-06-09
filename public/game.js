@@ -7,6 +7,9 @@ class SnakeRoyaleGame {
         this.playerId = null;
         this.gameState = null;
         this.lastDirection = { x: 1, y: 0 };
+        this.respawnTimer = null;
+        this.deathTime = null;
+        this.wasAlive = true; // Track previous alive state
         
         this.initializeSocket();
         this.setupKeyboardControls();
@@ -48,6 +51,16 @@ class SnakeRoyaleGame {
         
         this.socket.on('playerLeft', (playerId) => {
             console.log('Player left:', playerId);
+        });
+        
+        this.socket.on('respawnSuccessful', () => {
+            console.log('Respawn successful');
+            this.deathTime = null;
+            this.hideRespawnUI();
+        });
+        
+        this.socket.on('respawnDenied', (data) => {
+            console.log(`Respawn denied, wait ${data.remainingTime} more seconds`);
         });
     }
     
@@ -233,7 +246,18 @@ class SnakeRoyaleGame {
         const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
         if (currentPlayer) {
             document.getElementById('playerScore').textContent = currentPlayer.score;
-            document.getElementById('statusText').textContent = currentPlayer.alive ? 'Alive' : 'Dead';
+            
+            const isAlive = currentPlayer.alive;
+            
+            // Handle death state change
+            if (this.wasAlive && !isAlive) {
+                this.onPlayerDeath();
+            } else if (!this.wasAlive && isAlive) {
+                this.hideRespawnUI();
+            }
+            
+            this.wasAlive = isAlive;
+            document.getElementById('statusText').textContent = isAlive ? 'Alive' : 'Dead';
         }
         
         // Update leaderboard
@@ -256,6 +280,51 @@ class SnakeRoyaleGame {
     
     updateStatus(message) {
         document.getElementById('statusText').textContent = message;
+    }
+    
+    onPlayerDeath() {
+        this.deathTime = Date.now();
+        this.showRespawnUI();
+        this.startRespawnTimer();
+    }
+    
+    showRespawnUI() {
+        document.getElementById('respawnSection').classList.remove('hidden');
+        document.getElementById('respawnTimer').classList.remove('hidden');
+        document.getElementById('respawnButton').classList.add('hidden');
+    }
+    
+    hideRespawnUI() {
+        document.getElementById('respawnSection').classList.add('hidden');
+        if (this.respawnTimer) {
+            clearInterval(this.respawnTimer);
+            this.respawnTimer = null;
+        }
+    }
+    
+    startRespawnTimer() {
+        const RESPAWN_COOLDOWN = 10; // 10 seconds
+        let remainingTime = RESPAWN_COOLDOWN;
+        
+        const updateTimer = () => {
+            document.getElementById('respawnCountdown').textContent = remainingTime;
+            
+            if (remainingTime <= 0) {
+                document.getElementById('respawnTimer').classList.add('hidden');
+                document.getElementById('respawnButton').classList.remove('hidden');
+                clearInterval(this.respawnTimer);
+                this.respawnTimer = null;
+            } else {
+                remainingTime--;
+            }
+        };
+        
+        updateTimer(); // Initial update
+        this.respawnTimer = setInterval(updateTimer, 1000);
+    }
+    
+    requestRespawn() {
+        this.socket.emit('requestRespawn');
     }
     
     render() {
@@ -378,6 +447,12 @@ function joinGame() {
 function changeDirection(x, y) {
     if (game) {
         game.changeDirection(x, y);
+    }
+}
+
+function requestRespawn() {
+    if (game) {
+        game.requestRespawn();
     }
 }
 
