@@ -95,6 +95,7 @@ const gameState = {
   gameStatus: 'waiting', // waiting, playing, ended
   isKeynoteMode: false, // keynote mode flag
   lastUpdate: Date.now(),
+  lastBroadcast: Date.now(),
   round: 1,
   restartScheduled: false // Prevent multiple restart timers
 };
@@ -304,20 +305,26 @@ function gameLoop() {
     io.emit('gameStarted');
   }
 
-  // Broadcast game state (combine humans and NPCs)
-  const allPlayers = [
-    ...Array.from(gameState.players.values()),
-    ...Array.from(gameState.npcs.values())
-  ];
-  
-  io.emit('gameUpdate', {
-    players: allPlayers,
-    food: gameState.food,
-    gameArea: gameState.gameArea,
-    gameStatus: gameState.gameStatus,
-    isKeynoteMode: gameState.isKeynoteMode,
-    round: gameState.round
-  });
+  // Throttle broadcasts to reduce network load - broadcast at 25 FPS instead of 60 FPS
+  const timeSinceLastBroadcast = now - gameState.lastBroadcast;
+  if (timeSinceLastBroadcast >= 40) { // 40ms = 25 FPS
+    gameState.lastBroadcast = now;
+    
+    // Broadcast game state (combine humans and NPCs)
+    const allPlayers = [
+      ...Array.from(gameState.players.values()),
+      ...Array.from(gameState.npcs.values())
+    ];
+    
+    io.emit('gameUpdate', {
+      players: allPlayers,
+      food: gameState.food,
+      gameArea: gameState.gameArea,
+      gameStatus: gameState.gameStatus,
+      isKeynoteMode: gameState.isKeynoteMode,
+      round: gameState.round
+    });
+  }
 }
 
 function restartGame() {
@@ -368,6 +375,7 @@ function createNPC(id) {
     alive: true,
     joinTime: Date.now(),
     lastDirectionChange: Date.now(),
+    lastAIUpdate: 0, // Track when AI was last updated
     targetFood: null
   };
   
@@ -405,6 +413,12 @@ function manageNPCs() {
 function updateNPCAI(npc, deltaTime) {
   const head = npc.snake.body[0];
   const now = Date.now();
+  
+  // Throttle AI updates to every 100ms (10 FPS) instead of 60 FPS to reduce CPU load
+  if (now - npc.lastAIUpdate < 100) {
+    return; // Skip AI update this frame
+  }
+  npc.lastAIUpdate = now;
   
   // Change direction every 1-3 seconds or when approaching danger
   const shouldChangeDirection = 
@@ -639,7 +653,8 @@ function checkCollisions(player) {
     }
   });
   
-  // Check collision with other snakes
+  // Check collision with other snakes - optimization: skip collision checks for snakes that are far away
+  const maxCollisionDistance = 100; // Skip collision checks for snakes farther than this
   const allOtherSnakes = [
     ...Array.from(gameState.players.values()),
     ...Array.from(gameState.npcs.values())
@@ -647,6 +662,14 @@ function checkCollisions(player) {
   
   allOtherSnakes.forEach((otherPlayer) => {
     if (otherPlayer.alive) {
+      // Quick distance check to skip expensive collision detection for distant snakes
+      const otherHead = otherPlayer.snake.body[0];
+      const distance = Math.abs(head.x - otherHead.x) + Math.abs(head.y - otherHead.y); // Manhattan distance
+      
+      if (distance > maxCollisionDistance) {
+        return; // Skip this snake as it's too far away
+      }
+      
       otherPlayer.snake.body.forEach((segment, index) => {
         if (Math.abs(head.x - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
             Math.abs(head.y - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
