@@ -96,8 +96,9 @@ class SpectatorView {
     updateUI() {
         if (!this.gameState) return;
         
-        // Update player counts
-        const totalPlayers = this.gameState.players.length;
+        // Update player counts (only count connected players for active count, but show alive/dead including disconnected)
+        const connectedPlayers = this.gameState.players.filter(p => !p.disconnected);
+        const totalPlayers = connectedPlayers.length;
         const alivePlayers = this.gameState.players.filter(p => p.alive).length;
         
         document.getElementById('playerCount').textContent = `Players: ${totalPlayers}`;
@@ -162,11 +163,12 @@ class SpectatorView {
             const statusIcon = player.alive ? playerType : '💀';
             const rank = index + 1;
             const namePrefix = player.isNPC ? '🤖 ' : '';
+            const disconnectedSuffix = player.disconnected ? ' (DC)' : '';
             
             return `
                 <div class="leaderboard-item">
                     <div>
-                        <span class="player-name">${rank}. ${namePrefix}${player.name}</span>
+                        <span class="player-name">${rank}. ${namePrefix}${player.name}${disconnectedSuffix}</span>
                         <br>
                         <span class="player-status ${statusClass}">${statusIcon} ${player.alive ? 'Alive' : 'Dead'}</span>
                     </div>

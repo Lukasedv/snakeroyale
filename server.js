@@ -150,7 +150,7 @@ io.on('connection', (socket) => {
   // Player respawn request
   socket.on('requestRespawn', () => {
     const player = gameState.players.get(socket.id);
-    if (player && !player.alive && player.deathTime) {
+    if (player && !player.alive && player.deathTime && !player.disconnected) {
       const timeSinceDeath = Date.now() - player.deathTime;
       const RESPAWN_COOLDOWN = 10000; // 10 seconds in milliseconds
       
@@ -202,9 +202,13 @@ io.on('connection', (socket) => {
   // Player disconnects
   socket.on('disconnect', () => {
     if (gameState.players.has(socket.id)) {
-      gameState.players.delete(socket.id);
+      // Mark player as dead but keep them in leaderboard until game restart
+      const player = gameState.players.get(socket.id);
+      player.alive = false;
+      player.deathTime = Date.now();
+      player.disconnected = true;
       socket.broadcast.emit('playerLeft', socket.id);
-      console.log('Player disconnected:', socket.id);
+      console.log('Player disconnected and marked as dead:', socket.id);
     } else if (gameState.spectators.has(socket.id)) {
       gameState.spectators.delete(socket.id);
       console.log('Spectator disconnected:', socket.id);
@@ -246,10 +250,10 @@ function gameLoop() {
     const aliveHumans = Array.from(gameState.players.values()).filter(p => p.alive);
     const aliveNPCs = Array.from(gameState.npcs.values()).filter(p => p.alive);
     const totalAlive = aliveHumans.length + aliveNPCs.length;
-    const totalHumans = gameState.players.size; // Total humans (alive + dead)
+    const connectedHumans = Array.from(gameState.players.values()).filter(p => !p.disconnected).length; // Only connected humans
     
-    // Only auto-restart if there are no human players left at all, OR if only 1 entity total is alive AND no humans exist
-    if ((totalHumans === 0 && totalAlive <= 1) && !gameState.restartScheduled) {
+    // Only auto-restart if there are no connected human players left at all, OR if only 1 entity total is alive AND no connected humans exist
+    if ((connectedHumans === 0 && totalAlive <= 1) && !gameState.restartScheduled) {
       const winner = aliveHumans[0] || aliveNPCs[0] || null;
       io.emit('gameEnded', { winner });
       
