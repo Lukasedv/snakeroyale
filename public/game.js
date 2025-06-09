@@ -240,7 +240,7 @@ class SnakeRoyaleGame {
                 statusText = 'Game ended';
                 break;
         }
-        document.getElementById('gameStatus').textContent = statusText;
+        document.getElementById('gameStatusText').textContent = statusText;
         
         // Update player score
         const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
