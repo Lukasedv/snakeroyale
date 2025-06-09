@@ -57,6 +57,7 @@ app.get('/health', (req, res) => {
 const gameState = {
   players: new Map(),
   spectators: new Set(),
+  food: [],
   gameArea: {
     width: 800,
     height: 600,
@@ -86,6 +87,8 @@ io.on('connection', (socket) => {
         length: 5 // Starting length
       },
       score: 0,
+      foodScore: 0,
+      killScore: 0,
       alive: true,
       joinTime: Date.now()
     };
@@ -163,6 +166,9 @@ function gameLoop() {
   gameState.lastUpdate = now;
 
   if (gameState.gameStatus === 'playing') {
+    // Spawn food periodically
+    spawnFood();
+    
     // Update all snakes
     gameState.players.forEach((player) => {
       if (player.alive) {
@@ -188,6 +194,7 @@ function gameLoop() {
   // Broadcast game state
   io.emit('gameUpdate', {
     players: Array.from(gameState.players.values()),
+    food: gameState.food,
     gameArea: gameState.gameArea,
     gameStatus: gameState.gameStatus,
     round: gameState.round
@@ -196,6 +203,7 @@ function gameLoop() {
 
 function restartGame() {
   gameState.players.clear();
+  gameState.food = []; // Clear all food
   gameState.gameStatus = 'waiting';
   gameState.round++;
   gameState.lastUpdate = Date.now();
@@ -215,6 +223,35 @@ function updateSnake(snake, deltaTime) {
   // Maintain snake length - remove tail if too long
   while (snake.body.length > snake.length) {
     snake.body.pop();
+  }
+}
+
+function spawnFood() {
+  const maxFood = 5; // Maximum number of food items on screen
+  
+  while (gameState.food.length < maxFood) {
+    const food = {
+      id: Math.random().toString(36).substr(2, 9),
+      x: Math.random() * (gameState.gameArea.width - 60) + 30,
+      y: Math.random() * (gameState.gameArea.height - 60) + 30,
+      value: 5 // Points awarded for eating this food
+    };
+    
+    // Check if food spawns too close to any snake
+    let tooClose = false;
+    gameState.players.forEach((player) => {
+      if (player.alive) {
+        player.snake.body.forEach((segment) => {
+          if (Math.abs(food.x - segment.x) < 25 && Math.abs(food.y - segment.y) < 25) {
+            tooClose = true;
+          }
+        });
+      }
+    });
+    
+    if (!tooClose) {
+      gameState.food.push(food);
+    }
   }
 }
 
@@ -240,6 +277,17 @@ function checkCollisions(player) {
     }
   }
   
+  // Check food collision
+  gameState.food.forEach((food, index) => {
+    if (Math.abs(head.x - food.x) < 15 && Math.abs(head.y - food.y) < 15) {
+      // Player ate food
+      player.foodScore = (player.foodScore || 0) + food.value;
+      player.snake.length += 3; // Grow snake
+      gameState.food.splice(index, 1); // Remove eaten food
+      console.log(`Player ${player.name} ate food, food score: ${player.foodScore}`);
+    }
+  });
+  
   // Check collision with other snakes
   gameState.players.forEach((otherPlayer) => {
     if (otherPlayer.id !== player.id && otherPlayer.alive) {
@@ -250,7 +298,7 @@ function checkCollisions(player) {
           
           // Award points to the other player if they killed someone with their head
           if (index === 0) {
-            otherPlayer.score += 10;
+            otherPlayer.killScore = (otherPlayer.killScore || 0) + 10;
             console.log(`Player ${otherPlayer.name} eliminated ${player.name}`);
           } else {
             console.log(`Player ${player.name} hit ${otherPlayer.name}'s body`);
@@ -263,7 +311,10 @@ function checkCollisions(player) {
   // Award survival points over time
   if (player.alive) {
     const survivalTime = Date.now() - player.joinTime;
-    player.score = Math.floor(survivalTime / 1000); // 1 point per second of survival
+    const survivalPoints = Math.floor(survivalTime / 1000);
+    const foodPoints = player.foodScore || 0;
+    const killPoints = player.killScore || 0;
+    player.score = survivalPoints + foodPoints + killPoints;
   }
 }
 

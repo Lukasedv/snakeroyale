@@ -181,6 +181,13 @@ class SnakeRoyaleGame {
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.gameState.gameArea.width, this.gameState.gameArea.height);
         
+        // Draw food
+        if (this.gameState.food) {
+            this.gameState.food.forEach(food => {
+                this.drawFood(food);
+            });
+        }
+        
         // Draw all snakes
         this.gameState.players.forEach(player => {
             if (player.alive) {
@@ -234,6 +241,25 @@ class SnakeRoyaleGame {
         }
     }
     
+    drawFood(food) {
+        // Draw food as a glowing circle
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.shadowColor = '#ff6b6b';
+        this.ctx.shadowBlur = 10;
+        this.ctx.beginPath();
+        this.ctx.arc(food.x, food.y, 8, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // Reset shadow
+        this.ctx.shadowBlur = 0;
+        
+        // Draw inner highlight
+        this.ctx.fillStyle = '#ffaaaa';
+        this.ctx.beginPath();
+        this.ctx.arc(food.x, food.y, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
     drawSnakeHighlight(player) {
         const snake = player.snake;
         if (snake.body.length > 0) {
