@@ -62,6 +62,11 @@ class SnakeRoyaleGame {
         this.socket.on('respawnDenied', (data) => {
             console.log(`Respawn denied, wait ${data.remainingTime} more seconds`);
         });
+        
+        this.socket.on('keynoteToggled', (isKeynoteMode) => {
+            console.log('Keynote mode toggled:', isKeynoteMode);
+            this.handleKeynoteMode(isKeynoteMode);
+        });
     }
     
     setupKeyboardControls() {
@@ -306,6 +311,67 @@ class SnakeRoyaleGame {
         if (this.respawnTimer) {
             clearInterval(this.respawnTimer);
             this.respawnTimer = null;
+        }
+    }
+    
+    handleKeynoteMode(isKeynoteMode) {
+        if (isKeynoteMode) {
+            this.showKeynoteOverlay();
+        } else {
+            this.hideKeynoteOverlay();
+        }
+    }
+    
+    showKeynoteOverlay() {
+        // Remove existing overlay if it exists
+        this.hideKeynoteOverlay();
+        
+        // Create keynote overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'keynoteOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+        `;
+        
+        overlay.innerHTML = `
+            <div style="
+                text-align: center;
+                color: white;
+                font-size: 2.5em;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+                max-width: 80%;
+                padding: 40px;
+                background: rgba(0,0,0,0.5);
+                border-radius: 20px;
+                border: 3px solid #4ecdc4;
+            ">
+                <div style="font-size: 1.2em; color: #4ecdc4; margin-bottom: 20px;">
+                    🎯 KEYNOTE MODE
+                </div>
+                <div style="font-size: 0.8em; line-height: 1.4;">
+                    Please listen to the keynote,<br>
+                    will resume later.
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+    }
+    
+    hideKeynoteOverlay() {
+        const overlay = document.getElementById('keynoteOverlay');
+        if (overlay) {
+            document.body.removeChild(overlay);
         }
     }
     

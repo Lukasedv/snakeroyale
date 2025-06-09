@@ -147,6 +147,15 @@
             transform: none;
         }
         
+        .control-button.keynote-active {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .control-button.keynote-active:hover {
+            background: #ff5252;
+        }
+        
         .stats-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -273,6 +282,9 @@
                     </button>
                     <button class="control-button" onclick="pauseGame()" id="pauseBtn">
                         ⏸️ Pause Game
+                    </button>
+                    <button class="control-button" onclick="toggleKeynoteMode()" id="keynoteBtn">
+                        🎯 KEYNOTE MODE
                     </button>
                     <button class="control-button" onclick="clearPlayers()" id="clearBtn">
                         🧹 Clear Players

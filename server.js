@@ -93,6 +93,7 @@ const gameState = {
     shrinkRate: 0.1 // pixels per second
   },
   gameStatus: 'waiting', // waiting, playing, ended
+  isKeynoteMode: false, // keynote mode flag
   lastUpdate: Date.now(),
   round: 1,
   restartScheduled: false // Prevent multiple restart timers
@@ -216,6 +217,16 @@ io.on('connection', (socket) => {
     io.emit('playersCleared');
   });
 
+  socket.on('adminToggleKeynote', () => {
+    console.log('Admin keynote mode toggle requested');
+    gameState.isKeynoteMode = !gameState.isKeynoteMode;
+    
+    // Emit to all connected clients (players and spectators)
+    io.emit('keynoteToggled', gameState.isKeynoteMode);
+    
+    console.log(`Keynote mode ${gameState.isKeynoteMode ? 'activated' : 'deactivated'}`);
+  });
+
   // Player disconnects
   socket.on('disconnect', () => {
     if (gameState.players.has(socket.id)) {
@@ -242,7 +253,7 @@ function gameLoop() {
   // Manage NPCs based on player count
   manageNPCs();
 
-  if (gameState.gameStatus === 'playing') {
+  if (gameState.gameStatus === 'playing' && !gameState.isKeynoteMode) {
     // Spawn food periodically
     spawnFood();
     
