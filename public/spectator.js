@@ -60,6 +60,12 @@ class SpectatorView {
             this.gameStartTime = null;
             console.log('Game restarted by admin');
         });
+        
+        this.socket.on('keynoteToggled', (isKeynoteMode) => {
+            console.log('Keynote mode toggled:', isKeynoteMode);
+            this.updateKeynoteButton(isKeynoteMode);
+            this.handleKeynoteMode(isKeynoteMode);
+        });
     }
     
     initializeCanvas() {
@@ -93,6 +99,78 @@ class SpectatorView {
         }
     }
     
+    updateKeynoteButton(isKeynoteMode) {
+        const keynoteBtn = document.getElementById('keynoteBtn');
+        if (isKeynoteMode) {
+            keynoteBtn.classList.add('keynote-active');
+            keynoteBtn.innerHTML = '🎯 RESUME GAME';
+        } else {
+            keynoteBtn.classList.remove('keynote-active');
+            keynoteBtn.innerHTML = '🎯 KEYNOTE MODE';
+        }
+    }
+    
+    handleKeynoteMode(isKeynoteMode) {
+        if (isKeynoteMode) {
+            this.showKeynoteOverlay();
+        } else {
+            this.hideKeynoteOverlay();
+        }
+    }
+    
+    showKeynoteOverlay() {
+        // Remove existing overlay if it exists
+        this.hideKeynoteOverlay();
+        
+        // Create keynote overlay for spectator
+        const overlay = document.createElement('div');
+        overlay.id = 'spectatorKeynoteOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5000;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        `;
+        
+        overlay.innerHTML = `
+            <div style="
+                text-align: center;
+                color: white;
+                font-size: 2em;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+                max-width: 60%;
+                padding: 30px;
+                background: rgba(0,0,0,0.4);
+                border-radius: 15px;
+                border: 2px solid #4ecdc4;
+            ">
+                <div style="font-size: 1.1em; color: #4ecdc4; margin-bottom: 15px;">
+                    🎯 KEYNOTE MODE ACTIVE
+                </div>
+                <div style="font-size: 0.7em; line-height: 1.3;">
+                    Spectator view - Game paused for keynote
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(overlay);
+    }
+    
+    hideKeynoteOverlay() {
+        const overlay = document.getElementById('spectatorKeynoteOverlay');
+        if (overlay) {
+            document.body.removeChild(overlay);
+        }
+    }
+    
     updateUI() {
         if (!this.gameState) return;
         
@@ -112,7 +190,7 @@ class SpectatorView {
                 statusText = 'Waiting for players...';
                 break;
             case 'playing':
-                statusText = 'Battle in progress!';
+                statusText = this.gameState.isKeynoteMode ? 'Keynote Mode - Game Paused' : 'Battle in progress!';
                 break;
             case 'ended':
                 statusText = 'Game ended';
@@ -359,15 +437,26 @@ class SpectatorView {
     }
     
     drawDeadSnake(player, scaleX, scaleY) {
+        if (!player.deathTime) return; // Don't draw if no death time recorded
+        
         const snake = player.snake;
+        const fadeTime = 5000; // 5 seconds to fade completely
+        const timeSinceDeath = Date.now() - player.deathTime;
+        
+        // Don't draw if the snake has been dead for more than fade time
+        if (timeSinceDeath > fadeTime) return;
+        
+        // Calculate fade factor (1.0 = fully visible, 0.0 = completely faded)
+        const fadeFactor = Math.max(0, 1 - (timeSinceDeath / fadeTime));
+        const alpha = 0.3 * fadeFactor; // Start at 0.3 opacity and fade to 0
         
         snake.body.forEach((segment, index) => {
             const x = segment.x * scaleX;
             const y = segment.y * scaleY;
             const size = 12;
             
-            // Draw with transparency and dark color
-            this.ctx.globalAlpha = 0.3;
+            // Draw with fading transparency and dark color
+            this.ctx.globalAlpha = alpha;
             this.ctx.fillStyle = index === 0 ? '#666666' : '#444444';
             this.ctx.fillRect(x - size/2, y - size/2, size, size);
         });
@@ -392,6 +481,12 @@ function pauseGame() {
 function clearPlayers() {
     if (spectator && spectator.socket) {
         spectator.socket.emit('adminClearPlayers');
+    }
+}
+
+function toggleKeynoteMode() {
+    if (spectator && spectator.socket) {
+        spectator.socket.emit('adminToggleKeynote');
     }
 }
 
