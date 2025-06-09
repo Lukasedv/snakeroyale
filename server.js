@@ -631,13 +631,11 @@ function checkCollisions(player) {
     }
   });
   
-  // Award survival points over time
+  // Award only food and kill points (no survival time points)
   if (player.alive) {
-    const survivalTime = Date.now() - player.joinTime;
-    const survivalPoints = Math.floor(survivalTime / 1000);
     const foodPoints = player.foodScore || 0;
     const killPoints = player.killScore || 0;
-    player.score = survivalPoints + foodPoints + killPoints;
+    player.score = foodPoints + killPoints;
   }
 }
 

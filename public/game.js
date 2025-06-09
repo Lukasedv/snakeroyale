@@ -242,9 +242,10 @@ class SnakeRoyaleGame {
         }
         document.getElementById('gameStatusText').textContent = statusText;
         
-        // Update player score
+        // Update player score and info
         const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
         if (currentPlayer) {
+            document.getElementById('playerName').textContent = currentPlayer.name;
             document.getElementById('playerScore').textContent = currentPlayer.score;
             
             const isAlive = currentPlayer.alive;

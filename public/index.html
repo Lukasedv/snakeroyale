@@ -203,6 +203,14 @@
             font-weight: bold;
             margin: 5px 0;
         }
+        
+        .controls-tooltip {
+            margin-top: 10px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.8);
+            text-align: center;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -231,9 +239,11 @@
                 <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(1, 0)" onclick="changeDirection(1, 0)">→</button>
                 <button class="control-btn" ontouchstart="event.preventDefault(); changeDirection(0, 1)" onclick="changeDirection(0, 1)">↓</button>
             </div>
+            <div class="controls-tooltip">💡 Swipe screen to steer snake</div>
         </div>
         
         <div id="gameStatus" class="game-status hidden">
+            <div>Player: <span id="playerName">-</span></div>
             <div>Status: <span id="statusText">Waiting</span></div>
             <div>Your Score: <span id="playerScore">0</span></div>
             <div id="respawnSection" class="hidden">
