@@ -47,6 +47,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     players: gameState.players.size,
+    npcs: gameState.npcs.size,
     spectators: gameState.spectators.size,
     gameStatus: gameState.gameStatus,
     uptime: process.uptime()
@@ -56,7 +57,9 @@ app.get('/health', (req, res) => {
 // Game state
 const gameState = {
   players: new Map(),
+  npcs: new Map(),
   spectators: new Set(),
+  food: [],
   gameArea: {
     width: 800,
     height: 600,
@@ -86,6 +89,8 @@ io.on('connection', (socket) => {
         length: 5 // Starting length
       },
       score: 0,
+      foodScore: 0,
+      killScore: 0,
       alive: true,
       joinTime: Date.now()
     };
@@ -140,6 +145,7 @@ io.on('connection', (socket) => {
   socket.on('adminClearPlayers', () => {
     console.log('Admin clear players requested');
     gameState.players.clear();
+    gameState.npcs.clear(); // Also clear NPCs
     io.emit('playersCleared');
   });
 
@@ -162,32 +168,58 @@ function gameLoop() {
   const deltaTime = (now - gameState.lastUpdate) / 1000;
   gameState.lastUpdate = now;
 
+  // Manage NPCs based on player count
+  manageNPCs();
+
   if (gameState.gameStatus === 'playing') {
-    // Update all snakes
+    // Spawn food periodically
+    spawnFood();
+    
+    // Update all human players
     gameState.players.forEach((player) => {
       if (player.alive) {
         updateSnake(player.snake, deltaTime);
         checkCollisions(player);
       }
     });
+    
+    // Update all NPCs
+    gameState.npcs.forEach((npc) => {
+      if (npc.alive) {
+        updateNPCAI(npc, deltaTime);
+        updateSnake(npc.snake, deltaTime);
+        checkCollisions(npc);
+      }
+    });
 
-    // Check win condition
-    const alivePlayers = Array.from(gameState.players.values()).filter(p => p.alive);
-    if (alivePlayers.length <= 1) {
+    // Check win condition - count all alive entities
+    const aliveHumans = Array.from(gameState.players.values()).filter(p => p.alive);
+    const aliveNPCs = Array.from(gameState.npcs.values()).filter(p => p.alive);
+    const totalAlive = aliveHumans.length + aliveNPCs.length;
+    
+    if (totalAlive <= 1) {
       gameState.gameStatus = 'ended';
-      io.emit('gameEnded', { winner: alivePlayers[0] || null });
+      const winner = aliveHumans[0] || aliveNPCs[0] || null;
+      io.emit('gameEnded', { winner });
     }
   }
 
-  // Start game if enough players
-  if (gameState.gameStatus === 'waiting' && gameState.players.size >= 2) {
+  // Start game if enough players (humans + NPCs)
+  const totalPlayers = gameState.players.size + gameState.npcs.size;
+  if (gameState.gameStatus === 'waiting' && totalPlayers >= 2) {
     gameState.gameStatus = 'playing';
     io.emit('gameStarted');
   }
 
-  // Broadcast game state
+  // Broadcast game state (combine humans and NPCs)
+  const allPlayers = [
+    ...Array.from(gameState.players.values()),
+    ...Array.from(gameState.npcs.values())
+  ];
+  
   io.emit('gameUpdate', {
-    players: Array.from(gameState.players.values()),
+    players: allPlayers,
+    food: gameState.food,
     gameArea: gameState.gameArea,
     gameStatus: gameState.gameStatus,
     round: gameState.round
@@ -196,6 +228,8 @@ function gameLoop() {
 
 function restartGame() {
   gameState.players.clear();
+  gameState.npcs.clear(); // Clear all NPCs
+  gameState.food = []; // Clear all food
   gameState.gameStatus = 'waiting';
   gameState.round++;
   gameState.lastUpdate = Date.now();
@@ -218,6 +252,254 @@ function updateSnake(snake, deltaTime) {
   }
 }
 
+function createNPC(id) {
+  const npc = {
+    id: `npc_${id}`,
+    name: `Bot${id}`,
+    isNPC: true,
+    snake: {
+      body: [{
+        x: Math.random() * (gameState.gameArea.width - 100) + 50, 
+        y: Math.random() * (gameState.gameArea.height - 100) + 50
+      }],
+      direction: { x: 1, y: 0 },
+      color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+      length: 5
+    },
+    score: 0,
+    foodScore: 0,
+    killScore: 0,
+    alive: true,
+    joinTime: Date.now(),
+    lastDirectionChange: Date.now(),
+    targetFood: null
+  };
+  
+  // Initialize snake body
+  for (let i = 1; i < npc.snake.length; i++) {
+    npc.snake.body.push({
+      x: npc.snake.body[0].x - i * 10,
+      y: npc.snake.body[0].y
+    });
+  }
+  
+  return npc;
+}
+
+function manageNPCs() {
+  const humanPlayers = Array.from(gameState.players.values()).length;
+  const currentNPCs = gameState.npcs.size;
+  
+  // If only 1 human player, ensure we have 2 NPCs
+  if (humanPlayers === 1 && currentNPCs < 2) {
+    for (let i = currentNPCs; i < 2; i++) {
+      const npc = createNPC(i + 1);
+      gameState.npcs.set(npc.id, npc);
+      console.log(`NPC ${npc.name} joined for single player mode`);
+    }
+  }
+  
+  // If 2+ human players, remove all NPCs
+  if (humanPlayers >= 2 && currentNPCs > 0) {
+    gameState.npcs.clear();
+    console.log('NPCs removed - multiplayer mode');
+  }
+}
+
+function updateNPCAI(npc, deltaTime) {
+  const head = npc.snake.body[0];
+  const now = Date.now();
+  
+  // Change direction every 1-3 seconds or when approaching danger
+  const shouldChangeDirection = 
+    (now - npc.lastDirectionChange > Math.random() * 2000 + 1000) ||
+    willHitWall(npc) || 
+    willHitSnake(npc);
+  
+  if (shouldChangeDirection) {
+    // Try to find food to target
+    if (!npc.targetFood || !gameState.food.find(f => f.id === npc.targetFood)) {
+      npc.targetFood = findNearestFood(npc);
+    }
+    
+    // Get safe directions
+    const safeDirections = getSafeDirections(npc);
+    
+    if (safeDirections.length > 0) {
+      let newDirection;
+      
+      // If we have a food target, try to move towards it
+      if (npc.targetFood && safeDirections.length > 1) {
+        const food = gameState.food.find(f => f.id === npc.targetFood);
+        if (food) {
+          newDirection = getDirectionTowardsFood(npc, food, safeDirections);
+        }
+      }
+      
+      // If no food direction or single safe direction, pick randomly
+      if (!newDirection) {
+        newDirection = safeDirections[Math.floor(Math.random() * safeDirections.length)];
+      }
+      
+      npc.snake.direction = newDirection;
+      npc.lastDirectionChange = now;
+    }
+  }
+}
+
+function willHitWall(npc) {
+  const head = npc.snake.body[0];
+  const dir = npc.snake.direction;
+  const nextX = head.x + dir.x * 40; // Look ahead 40 pixels
+  const nextY = head.y + dir.y * 40;
+  
+  return nextX < 20 || nextX > gameState.gameArea.width - 20 || 
+         nextY < 20 || nextY > gameState.gameArea.height - 20;
+}
+
+function willHitSnake(npc) {
+  const head = npc.snake.body[0];
+  const dir = npc.snake.direction;
+  const nextX = head.x + dir.x * 30; // Look ahead 30 pixels
+  const nextY = head.y + dir.y * 30;
+  
+  // Check collision with self (skip first segment)
+  for (let i = 4; i < npc.snake.body.length; i++) {
+    const segment = npc.snake.body[i];
+    if (Math.abs(nextX - segment.x) < 15 && Math.abs(nextY - segment.y) < 15) {
+      return true;
+    }
+  }
+  
+  // Check collision with other snakes
+  const allSnakes = [...gameState.players.values(), ...gameState.npcs.values()];
+  for (const other of allSnakes) {
+    if (other.id !== npc.id && other.alive) {
+      for (const segment of other.snake.body) {
+        if (Math.abs(nextX - segment.x) < 15 && Math.abs(nextY - segment.y) < 15) {
+          return true;
+        }
+      }
+    }
+  }
+  
+  return false;
+}
+
+function getSafeDirections(npc) {
+  const directions = [
+    { x: 0, y: -1 }, // Up
+    { x: 0, y: 1 },  // Down
+    { x: -1, y: 0 }, // Left
+    { x: 1, y: 0 }   // Right
+  ];
+  
+  const currentDir = npc.snake.direction;
+  
+  return directions.filter(dir => {
+    // Don't reverse direction
+    if (dir.x === -currentDir.x && dir.y === -currentDir.y) return false;
+    
+    // Test if this direction is safe
+    const head = npc.snake.body[0];
+    const testX = head.x + dir.x * 30;
+    const testY = head.y + dir.y * 30;
+    
+    // Check walls
+    if (testX < 20 || testX > gameState.gameArea.width - 20 || 
+        testY < 20 || testY > gameState.gameArea.height - 20) {
+      return false;
+    }
+    
+    // Check snake collisions
+    const allSnakes = [...gameState.players.values(), ...gameState.npcs.values()];
+    for (const other of allSnakes) {
+      if (other.alive) {
+        for (let i = (other.id === npc.id ? 4 : 0); i < other.snake.body.length; i++) {
+          const segment = other.snake.body[i];
+          if (Math.abs(testX - segment.x) < 15 && Math.abs(testY - segment.y) < 15) {
+            return false;
+          }
+        }
+      }
+    }
+    
+    return true;
+  });
+}
+
+function findNearestFood(npc) {
+  if (gameState.food.length === 0) return null;
+  
+  const head = npc.snake.body[0];
+  let nearest = null;
+  let minDistance = Infinity;
+  
+  for (const food of gameState.food) {
+    const distance = Math.sqrt(Math.pow(head.x - food.x, 2) + Math.pow(head.y - food.y, 2));
+    if (distance < minDistance) {
+      minDistance = distance;
+      nearest = food.id;
+    }
+  }
+  
+  return nearest;
+}
+
+function getDirectionTowardsFood(npc, food, safeDirections) {
+  const head = npc.snake.body[0];
+  const dx = food.x - head.x;
+  const dy = food.y - head.y;
+  
+  // Prefer the direction that gets us closer to food
+  let bestDirection = null;
+  let bestScore = -Infinity;
+  
+  for (const dir of safeDirections) {
+    // Calculate how much this direction helps us approach the food
+    const score = dx * dir.x + dy * dir.y;
+    if (score > bestScore) {
+      bestScore = score;
+      bestDirection = dir;
+    }
+  }
+  
+  return bestDirection;
+}
+
+function spawnFood() {
+  const maxFood = 5; // Maximum number of food items on screen
+  
+  while (gameState.food.length < maxFood) {
+    const food = {
+      id: Math.random().toString(36).substr(2, 9),
+      x: Math.random() * (gameState.gameArea.width - 60) + 30,
+      y: Math.random() * (gameState.gameArea.height - 60) + 30,
+      value: 5 // Points awarded for eating this food
+    };
+    
+    // Check if food spawns too close to any snake
+    let tooClose = false;
+    const allSnakes = [...gameState.players.values(), ...gameState.npcs.values()];
+    
+    for (const player of allSnakes) {
+      if (player.alive) {
+        for (const segment of player.snake.body) {
+          if (Math.abs(food.x - segment.x) < 25 && Math.abs(food.y - segment.y) < 25) {
+            tooClose = true;
+            break;
+          }
+        }
+        if (tooClose) break;
+      }
+    }
+    
+    if (!tooClose) {
+      gameState.food.push(food);
+    }
+  }
+}
+
 function checkCollisions(player) {
   const snake = player.snake;
   const head = snake.body[0];
@@ -226,7 +508,7 @@ function checkCollisions(player) {
   if (head.x < 10 || head.x > gameState.gameArea.width - 10 || 
       head.y < 10 || head.y > gameState.gameArea.height - 10) {
     player.alive = false;
-    console.log(`Player ${player.name} hit wall`);
+    console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit wall`);
     return;
   }
   
@@ -235,14 +517,33 @@ function checkCollisions(player) {
     if (Math.abs(head.x - snake.body[i].x) < 8 && 
         Math.abs(head.y - snake.body[i].y) < 8) {
       player.alive = false;
-      console.log(`Player ${player.name} hit themselves`);
+      console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit themselves`);
       return;
     }
   }
   
+  // Check food collision
+  gameState.food.forEach((food, index) => {
+    if (Math.abs(head.x - food.x) < 15 && Math.abs(head.y - food.y) < 15) {
+      // Player ate food
+      player.foodScore = (player.foodScore || 0) + food.value;
+      player.snake.length += 3; // Grow snake
+      gameState.food.splice(index, 1); // Remove eaten food
+      if (player.isNPC && player.targetFood === food.id) {
+        player.targetFood = null; // Clear target
+      }
+      console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} ate food, food score: ${player.foodScore}`);
+    }
+  });
+  
   // Check collision with other snakes
-  gameState.players.forEach((otherPlayer) => {
-    if (otherPlayer.id !== player.id && otherPlayer.alive) {
+  const allOtherSnakes = [
+    ...Array.from(gameState.players.values()),
+    ...Array.from(gameState.npcs.values())
+  ].filter(other => other.id !== player.id);
+  
+  allOtherSnakes.forEach((otherPlayer) => {
+    if (otherPlayer.alive) {
       otherPlayer.snake.body.forEach((segment, index) => {
         if (Math.abs(head.x - segment.x) < 12 && 
             Math.abs(head.y - segment.y) < 12) {
@@ -250,10 +551,10 @@ function checkCollisions(player) {
           
           // Award points to the other player if they killed someone with their head
           if (index === 0) {
-            otherPlayer.score += 10;
-            console.log(`Player ${otherPlayer.name} eliminated ${player.name}`);
+            otherPlayer.killScore = (otherPlayer.killScore || 0) + 10;
+            console.log(`${otherPlayer.isNPC ? 'NPC' : 'Player'} ${otherPlayer.name} eliminated ${player.isNPC ? 'NPC' : 'Player'} ${player.name}`);
           } else {
-            console.log(`Player ${player.name} hit ${otherPlayer.name}'s body`);
+            console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit ${otherPlayer.isNPC ? 'NPC' : 'Player'} ${otherPlayer.name}'s body`);
           }
         }
       });
@@ -263,7 +564,10 @@ function checkCollisions(player) {
   // Award survival points over time
   if (player.alive) {
     const survivalTime = Date.now() - player.joinTime;
-    player.score = Math.floor(survivalTime / 1000); // 1 point per second of survival
+    const survivalPoints = Math.floor(survivalTime / 1000);
+    const foodPoints = player.foodScore || 0;
+    const killPoints = player.killScore || 0;
+    player.score = survivalPoints + foodPoints + killPoints;
   }
 }
 

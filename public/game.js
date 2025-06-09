@@ -160,9 +160,12 @@ class SnakeRoyaleGame {
             .slice(0, 10);
         
         const leaderboardList = document.getElementById('leaderboardList');
-        leaderboardList.innerHTML = leaderboard.map((player, index) => 
-            `<div>${index + 1}. ${player.name} (${player.alive ? '🐍' : '💀'}) - ${player.score}</div>`
-        ).join('');
+        leaderboardList.innerHTML = leaderboard.map((player, index) => {
+            const playerType = player.isNPC ? '🤖' : '🐍';
+            const status = player.alive ? playerType : '💀';
+            const namePrefix = player.isNPC ? '🤖 ' : '';
+            return `<div>${index + 1}. ${namePrefix}${player.name} (${status}) - ${player.score}</div>`;
+        }).join('');
     }
     
     updateStatus(message) {
@@ -181,6 +184,13 @@ class SnakeRoyaleGame {
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.gameState.gameArea.width, this.gameState.gameArea.height);
         
+        // Draw food
+        if (this.gameState.food) {
+            this.gameState.food.forEach(food => {
+                this.drawFood(food);
+            });
+        }
+        
         // Draw all snakes
         this.gameState.players.forEach(player => {
             if (player.alive) {
@@ -198,6 +208,7 @@ class SnakeRoyaleGame {
     drawSnake(player) {
         const snake = player.snake;
         const isCurrentPlayer = player.id === this.playerId;
+        const isNPC = player.isNPC;
         
         snake.body.forEach((segment, index) => {
             this.ctx.fillStyle = index === 0 ? 
@@ -223,17 +234,36 @@ class SnakeRoyaleGame {
         // Draw player name
         if (snake.body.length > 0) {
             const head = snake.body[0];
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = '12px Arial';
+            this.ctx.fillStyle = isNPC ? '#ffaa00' : '#ffffff';
+            this.ctx.font = isNPC ? 'italic 12px Arial' : '12px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(
-                player.name, 
+                isNPC ? `🤖 ${player.name}` : player.name, 
                 head.x, 
                 head.y - 10
             );
         }
     }
     
+    drawFood(food) {
+        // Draw food as a glowing circle
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.shadowColor = '#ff6b6b';
+        this.ctx.shadowBlur = 10;
+        this.ctx.beginPath();
+        this.ctx.arc(food.x, food.y, 8, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // Reset shadow
+        this.ctx.shadowBlur = 0;
+        
+        // Draw inner highlight
+        this.ctx.fillStyle = '#ffaaaa';
+        this.ctx.beginPath();
+        this.ctx.arc(food.x, food.y, 4, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
     drawSnakeHighlight(player) {
         const snake = player.snake;
         if (snake.body.length > 0) {
