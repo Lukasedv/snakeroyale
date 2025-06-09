@@ -56,7 +56,7 @@ app.get('/health', (req, res) => {
 
 // Collision detection constants - standardized across all functions
 const COLLISION_CONSTANTS = {
-  SNAKE_COLLISION_THRESHOLD: 12,  // Distance for snake-to-snake collisions
+  SNAKE_COLLISION_THRESHOLD: 8,   // Distance for snake-to-snake collisions (reduced from 12 to prevent false positives)
   FOOD_COLLISION_THRESHOLD: 15,   // Distance for snake-to-food collisions
   WALL_MARGIN: 15,                // Distance from walls for safety checks
   SELF_COLLISION_SKIP_SEGMENTS: 15 // Number of head segments to skip for self-collision
