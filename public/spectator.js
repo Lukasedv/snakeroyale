@@ -190,7 +190,7 @@ class SpectatorView {
                 statusText = 'Waiting for players...';
                 break;
             case 'playing':
-                statusText = 'Battle in progress!';
+                statusText = this.gameState.isKeynoteMode ? 'Keynote Mode - Game Paused' : 'Battle in progress!';
                 break;
             case 'ended':
                 statusText = 'Game ended';

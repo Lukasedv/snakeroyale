@@ -315,6 +315,7 @@ function gameLoop() {
     food: gameState.food,
     gameArea: gameState.gameArea,
     gameStatus: gameState.gameStatus,
+    isKeynoteMode: gameState.isKeynoteMode,
     round: gameState.round
   });
 }
@@ -324,6 +325,7 @@ function restartGame() {
   gameState.npcs.clear(); // Clear all NPCs
   gameState.food = []; // Clear all food
   gameState.gameStatus = 'waiting';
+  gameState.isKeynoteMode = false; // Reset keynote mode
   gameState.restartScheduled = false; // Reset restart flag
   gameState.round++;
   gameState.lastUpdate = Date.now();
