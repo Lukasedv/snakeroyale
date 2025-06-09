@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Royale - Spectator View</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #0a0a0a;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .spectator-container {
+            display: flex;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .game-stats {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+        
+        #spectatorCanvas {
+            border: 4px solid #fff;
+            border-radius: 15px;
+            background: #1a1a2e;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            max-width: 70vw;
+            max-height: 70vh;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-left: 3px solid #4ecdc4;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .sidebar-section {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .sidebar-section h3 {
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            border-bottom: 2px solid #4ecdc4;
+            padding-bottom: 5px;
+        }
+        
+        .leaderboard {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .leaderboard-item:last-child {
+            border-bottom: none;
+        }
+        
+        .player-name {
+            font-weight: bold;
+        }
+        
+        .player-status {
+            font-size: 0.9em;
+        }
+        
+        .alive {
+            color: #4CAF50;
+        }
+        
+        .dead {
+            color: #f44336;
+        }
+        
+        .game-controls {
+            text-align: center;
+        }
+        
+        .control-button {
+            background: #4ecdc4;
+            color: #1a1a2e;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .control-button:hover {
+            background: #45b7d1;
+            transform: translateY(-2px);
+        }
+        
+        .control-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #ccc;
+        }
+        
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .connected {
+            background: #4CAF50;
+            color: white;
+        }
+        
+        .disconnected {
+            background: #f44336;
+            color: white;
+        }
+        
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 250px;
+            }
+            
+            .header h1 {
+                font-size: 2.5em;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .spectator-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                max-height: 30vh;
+                overflow-y: auto;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="spectator-container">
+        <div class="game-area">
+            <div class="header">
+                <h1>🐍 Snake Royale 🐍</h1>
+                <div class="game-stats">
+                    <span id="playerCount">Players: 0</span> | 
+                    <span id="gameStatus">Waiting for players...</span> | 
+                    <span id="gameTimer">00:00</span>
+                </div>
+            </div>
+            
+            <canvas id="spectatorCanvas" width="1200" height="800"></canvas>
+        </div>
+        
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <h3>📊 Game Statistics</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPlayers">0</div>
+                        <div class="stat-label">Total Players</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="alivePlayers">0</div>
+                        <div class="stat-label">Alive</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="gameRound">1</div>
+                        <div class="stat-label">Round</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="gameTime">0s</div>
+                        <div class="stat-label">Duration</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>🏆 Leaderboard</h3>
+                <div class="leaderboard" id="leaderboard">
+                    <div class="leaderboard-item">
+                        <span>Waiting for players...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>🎮 Game Controls</h3>
+                <div class="game-controls">
+                    <button class="control-button" onclick="restartGame()" id="restartBtn">
+                        🔄 Restart Game
+                    </button>
+                    <button class="control-button" onclick="pauseGame()" id="pauseBtn">
+                        ⏸️ Pause Game
+                    </button>
+                    <button class="control-button" onclick="clearPlayers()" id="clearBtn">
+                        🧹 Clear Players
+                    </button>
+                </div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h3>📡 Connection Info</h3>
+                <div>
+                    <div><strong>Server:</strong> <span id="serverInfo">localhost:3000</span></div>
+                    <div><strong>Latency:</strong> <span id="latency">- ms</span></div>
+                    <div><strong>FPS:</strong> <span id="fps">60</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="connection-status connected" id="connectionStatus">
+        🟢 Connected
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="spectator.js"></script>
+</body>
+</html>
