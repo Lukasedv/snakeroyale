@@ -81,9 +81,47 @@ class SnakeRoyaleGame {
         });
     }
     
+    // Generate or retrieve a persistent device ID
+    getDeviceId() {
+        let deviceId = localStorage.getItem('snakeRoyaleDeviceId');
+        if (!deviceId) {
+            // Generate a unique device ID based on timestamp and random number
+            deviceId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+            localStorage.setItem('snakeRoyaleDeviceId', deviceId);
+        }
+        return deviceId;
+    }
+    
+    // Generate a consistent name from device ID
+    generatePlayerName(deviceId) {
+        // Create a simple hash from the device ID
+        let hash = 0;
+        for (let i = 0; i < deviceId.length; i++) {
+            const char = deviceId.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        
+        // Use absolute value and ensure it's positive
+        hash = Math.abs(hash);
+        
+        // List of snake-related names
+        const snakeNames = [
+            'Cobra', 'Python', 'Viper', 'Anaconda', 'Mamba', 'Boa', 'Rattler', 'Serpent',
+            'Adder', 'Copperhead', 'Kingsnake', 'Garter', 'Coral', 'Bull', 'Milk', 'Grass',
+            'Ring', 'Sand', 'Hog', 'Pine', 'Rat', 'Rock', 'Rubber', 'Smooth', 'Sharp',
+            'Rough', 'Water', 'Earth', 'Fire', 'Storm', 'Thunder', 'Lightning', 'Shadow'
+        ];
+        
+        const nameIndex = hash % snakeNames.length;
+        const number = (hash % 999) + 1; // 1-999
+        
+        return `${snakeNames[nameIndex]}${number.toString().padStart(3, '0')}`;
+    }
+    
     joinGame() {
-        const nameInput = document.getElementById('playerName');
-        const playerName = nameInput.value.trim() || `Player${Math.floor(Math.random() * 1000)}`;
+        const deviceId = this.getDeviceId();
+        const playerName = this.generatePlayerName(deviceId);
         
         this.socket.emit('joinGame', { name: playerName });
     }
@@ -298,14 +336,4 @@ function changeDirection(x, y) {
 // Initialize game when page loads
 document.addEventListener('DOMContentLoaded', () => {
     game = new SnakeRoyaleGame();
-    
-    // Focus on name input
-    document.getElementById('playerName').focus();
-    
-    // Allow enter key to join game
-    document.getElementById('playerName').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            joinGame();
-        }
-    });
 });
