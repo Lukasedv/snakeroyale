@@ -1,11 +1,30 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
+
+// HTTPS configuration
+const USE_HTTPS = process.env.USE_HTTPS === 'true';
+const SSL_CERT_PATH = process.env.SSL_CERT_PATH || '/app/certs/cert.pem';
+const SSL_KEY_PATH = process.env.SSL_KEY_PATH || '/app/certs/key.pem';
+
+let server;
+if (USE_HTTPS && fs.existsSync(SSL_CERT_PATH) && fs.existsSync(SSL_KEY_PATH)) {
+  const httpsOptions = {
+    cert: fs.readFileSync(SSL_CERT_PATH),
+    key: fs.readFileSync(SSL_KEY_PATH)
+  };
+  server = https.createServer(httpsOptions, app);
+  console.log('🔒 HTTPS server configured');
+} else {
+  server = http.createServer(app);
+  console.log('🔓 HTTP server configured');
+}
 const io = socketIo(server, {
   cors: {
     origin: "*",
@@ -646,6 +665,15 @@ setInterval(gameLoop, 1000 / 60); // 60 FPS
 
 // Start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Snake Royale server running on port ${PORT}`);
+const HTTPS_PORT = process.env.HTTPS_PORT || 443;
+
+// Use HTTPS port if HTTPS is enabled and PORT is default
+const finalPort = USE_HTTPS && PORT === 3000 ? HTTPS_PORT : PORT;
+
+server.listen(finalPort, () => {
+  const protocol = USE_HTTPS ? 'HTTPS' : 'HTTP';
+  console.log(`Snake Royale server running on ${protocol} port ${finalPort}`);
+  if (USE_HTTPS) {
+    console.log('🔒 SSL/TLS encryption enabled');
+  }
 });

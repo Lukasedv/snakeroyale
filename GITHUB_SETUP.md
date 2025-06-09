@@ -101,14 +101,23 @@ Once you've added these secrets, the GitHub Action will:
 ### Production Environment (main branch)
 - **Game**: http://snake-royale-prod.swedencentral.azurecontainer.io:3000
 - **Spectator**: http://snake-royale-prod.swedencentral.azurecontainer.io:3000/spectator.html
+- **HTTPS Ready**: Configure Azure Application Gateway for SSL termination
 
-**Note**: Production URLs remain stable across deployments.
+**Note**: Production URLs remain stable across deployments. HTTPS available via Application Gateway.
 
 ### Development Environment (pull requests)
 - **Game**: http://snake-royale-dev-pr-[NUMBER].swedencentral.azurecontainer.io:3000
 - **Spectator**: http://snake-royale-dev-pr-[NUMBER].swedencentral.azurecontainer.io:3000/spectator.html
+- **HTTPS Ready**: Configure Azure Application Gateway for SSL termination
 
 **Note**: Development URLs are unique per PR and automatically cleaned up.
+
+### HTTPS Setup
+To enable HTTPS for your deployment:
+1. Follow the instructions in `DEPLOYMENT.md` Step 7
+2. Run the `azure-https-setup.sh` script
+3. Configure your SSL certificate
+4. Access via: `https://[your-domain]`
 
 ## Troubleshooting
 
