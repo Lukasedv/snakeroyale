@@ -10,7 +10,6 @@ env:
   REGISTRY_NAME: snakeregistry  # Change this to your registry name
   IMAGE_NAME: snakeroyale
   RESOURCE_GROUP: snake-royale-rg
-  CONTAINER_INSTANCE_NAME: snake-royale-ci
 
 jobs:
   build-and-deploy:
@@ -19,6 +18,25 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    - name: Set deployment environment variables
+      run: |
+        if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "ENVIRONMENT=prod" >> $GITHUB_ENV
+          echo "CONTAINER_INSTANCE_NAME=snake-royale-prod-ci" >> $GITHUB_ENV
+          echo "DNS_NAME_LABEL=snake-royale-prod" >> $GITHUB_ENV
+          echo "NODE_ENV=production" >> $GITHUB_ENV
+        elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          echo "CONTAINER_INSTANCE_NAME=snake-royale-dev-ci" >> $GITHUB_ENV
+          echo "DNS_NAME_LABEL=snake-royale-dev-pr-${{ github.event.number }}" >> $GITHUB_ENV
+          echo "NODE_ENV=development" >> $GITHUB_ENV
+        else
+          echo "ENVIRONMENT=dev" >> $GITHUB_ENV
+          echo "CONTAINER_INSTANCE_NAME=snake-royale-dev-ci" >> $GITHUB_ENV
+          echo "DNS_NAME_LABEL=snake-royale-dev-${{ github.run_number }}" >> $GITHUB_ENV
+          echo "NODE_ENV=development" >> $GITHUB_ENV
+        fi
       
     - name: Set up Node.js
       uses: actions/setup-node@v4
@@ -80,11 +98,11 @@ jobs:
             --registry-login-server ${{ env.REGISTRY_NAME }}.azurecr.io \
             --registry-username ${{ secrets.ACR_USERNAME }} \
             --registry-password ${{ secrets.ACR_PASSWORD }} \
-            --dns-name-label snake-royale-${{ github.run_number }} \
+            --dns-name-label ${{ env.DNS_NAME_LABEL }} \
             --ports 3000 \
             --cpu 2 \
             --memory 4 \
-            --environment-variables PORT=3000 NODE_ENV=production GITHUB_SHA=${{ github.sha }} \
+            --environment-variables PORT=3000 NODE_ENV=${{ env.NODE_ENV }} GITHUB_SHA=${{ github.sha }} ENVIRONMENT=${{ env.ENVIRONMENT }} \
             --restart-policy Always \
             --location swedencentral \
             --os-type Linux || {
@@ -132,6 +150,16 @@ jobs:
         echo "👥 Spectator URL: http://$FQDN:3000/spectator.html"
         echo "📍 IP Address: $IP"
         echo "🌍 Region: Sweden Central"
+        echo "🚀 Environment: ${{ env.ENVIRONMENT }}"
         
-        echo "::notice title=Deployment Successful::Game deployed to http://$FQDN:3000"
+        if [ "${{ env.ENVIRONMENT }}" == "prod" ]; then
+          echo "::notice title=Production Deployment Successful::Game deployed to http://$FQDN:3000"
+          echo "::notice title=Stable Production URL::This URL will remain consistent across deployments"
+        elif [ "${{ github.event_name }}" == "pull_request" ]; then
+          echo "::notice title=Development Deployment Successful::Dev environment deployed to http://$FQDN:3000"
+          echo "::notice title=PR Environment::This is a temporary dev environment for PR #${{ github.event.number }}"
+        else
+          echo "::notice title=Development Deployment Successful::Dev environment deployed to http://$FQDN:3000"
+          echo "::notice title=Dev Environment::This is a temporary development environment"
+        fi
         echo "::notice title=Spectator View::Spectator view at http://$FQDN:3000/spectator.html"
