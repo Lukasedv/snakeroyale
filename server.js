@@ -173,9 +173,7 @@ io.on('connection', (socket) => {
           });
         }
         
-        // Reset scores but keep survival time
-        player.foodScore = 0;
-        player.killScore = 0;
+        // Keep scores on respawn, only reset joinTime
         player.joinTime = Date.now();
         
         console.log(`Player ${player.name} respawned`);
