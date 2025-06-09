@@ -67,7 +67,8 @@ const gameState = {
   },
   gameStatus: 'waiting', // waiting, playing, ended
   lastUpdate: Date.now(),
-  round: 1
+  round: 1,
+  restartScheduled: false // Prevent multiple restart timers
 };
 
 // Socket handling
@@ -197,10 +198,19 @@ function gameLoop() {
     const aliveNPCs = Array.from(gameState.npcs.values()).filter(p => p.alive);
     const totalAlive = aliveHumans.length + aliveNPCs.length;
     
-    if (totalAlive <= 1) {
-      gameState.gameStatus = 'ended';
+    if (totalAlive <= 1 && !gameState.restartScheduled) {
       const winner = aliveHumans[0] || aliveNPCs[0] || null;
       io.emit('gameEnded', { winner });
+      
+      gameState.gameStatus = 'ended'; // Temporary state during restart delay
+      gameState.restartScheduled = true;
+      
+      // Auto-restart the game after a brief delay to keep it ongoing
+      setTimeout(() => {
+        restartGame();
+        io.emit('gameRestarted');
+        console.log('Game auto-restarted after round completion');
+      }, 3000); // 3 second delay to show the winner
     }
   }
 
@@ -231,6 +241,7 @@ function restartGame() {
   gameState.npcs.clear(); // Clear all NPCs
   gameState.food = []; // Clear all food
   gameState.gameStatus = 'waiting';
+  gameState.restartScheduled = false; // Reset restart flag
   gameState.round++;
   gameState.lastUpdate = Date.now();
   console.log(`Game restarted. Round ${gameState.round}`);
