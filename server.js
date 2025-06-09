@@ -101,7 +101,8 @@ io.on('connection', (socket) => {
       foodScore: 0,
       killScore: 0,
       alive: true,
-      joinTime: Date.now()
+      joinTime: Date.now(),
+      deathTime: null
     };
     
     // Initialize snake body with starting length
@@ -144,6 +145,46 @@ io.on('connection', (socket) => {
     console.log('Admin restart requested');
     restartGame();
     io.emit('gameRestarted');
+  });
+
+  // Player respawn request
+  socket.on('requestRespawn', () => {
+    const player = gameState.players.get(socket.id);
+    if (player && !player.alive && player.deathTime) {
+      const timeSinceDeath = Date.now() - player.deathTime;
+      const RESPAWN_COOLDOWN = 10000; // 10 seconds in milliseconds
+      
+      if (timeSinceDeath >= RESPAWN_COOLDOWN) {
+        // Reset player state for respawn
+        player.alive = true;
+        player.deathTime = null;
+        player.snake.body = [{
+          x: Math.random() * (gameState.gameArea.width - 100) + 50,
+          y: Math.random() * (gameState.gameArea.height - 100) + 50
+        }];
+        player.snake.direction = { x: 1, y: 0 };
+        player.snake.length = 5;
+        
+        // Initialize snake body with starting length
+        for (let i = 1; i < player.snake.length; i++) {
+          player.snake.body.push({
+            x: player.snake.body[0].x - i * 10,
+            y: player.snake.body[0].y
+          });
+        }
+        
+        // Reset scores but keep survival time
+        player.foodScore = 0;
+        player.killScore = 0;
+        player.joinTime = Date.now();
+        
+        console.log(`Player ${player.name} respawned`);
+        socket.emit('respawnSuccessful');
+      } else {
+        const remainingTime = Math.ceil((RESPAWN_COOLDOWN - timeSinceDeath) / 1000);
+        socket.emit('respawnDenied', { remainingTime });
+      }
+    }
   });
 
   socket.on('adminPause', () => {
@@ -531,6 +572,7 @@ function checkCollisions(player) {
   if (head.x < COLLISION_CONSTANTS.WALL_MARGIN || head.x > gameState.gameArea.width - COLLISION_CONSTANTS.WALL_MARGIN || 
       head.y < COLLISION_CONSTANTS.WALL_MARGIN || head.y > gameState.gameArea.height - COLLISION_CONSTANTS.WALL_MARGIN) {
     player.alive = false;
+    player.deathTime = Date.now();
     console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit wall`);
     return;
   }
@@ -540,6 +582,7 @@ function checkCollisions(player) {
     if (Math.abs(head.x - snake.body[i].x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
         Math.abs(head.y - snake.body[i].y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
       player.alive = false;
+      player.deathTime = Date.now();
       console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit themselves`);
       return;
     }
@@ -572,6 +615,7 @@ function checkCollisions(player) {
         if (Math.abs(head.x - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
             Math.abs(head.y - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
           player.alive = false;
+          player.deathTime = Date.now();
           
           // Award points to the other player if they killed someone with their head
           if (index === 0) {
