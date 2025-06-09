@@ -225,10 +225,92 @@
                 font-size: 2em;
             }
         }
+        
+        .auth-screen {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+        }
+        
+        .auth-form {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .auth-form h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .auth-form p {
+            margin-bottom: 30px;
+            color: #ccc;
+        }
+        
+        .auth-form input {
+            padding: 15px 20px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            text-align: center;
+            outline: none;
+            width: 100%;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+        
+        .auth-form button {
+            padding: 15px 30px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 25px;
+            background: #4ecdc4;
+            color: #1a1a2e;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .auth-form button:hover {
+            background: #45b7d1;
+            transform: translateY(-2px);
+        }
+        
+        .auth-error {
+            color: #ff6b6b;
+            margin-top: 15px;
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <div class="spectator-container">
+    <div id="authScreen" class="auth-screen">
+        <div class="auth-form">
+            <h1>🐍 Spectator Access</h1>
+            <p>Enter the admin password to access the spectator view</p>
+            <input type="password" id="passwordInput" placeholder="Enter password" onkeypress="handlePasswordKeypress(event)">
+            <button onclick="authenticate()">Access Spectator View</button>
+            <div id="authError" class="auth-error">Incorrect password. Please try again.</div>
+        </div>
+    </div>
+    
+    <div id="spectatorView" class="spectator-container" style="display: none;">
         <div class="game-area">
             <div class="header">
                 <h1>🐍 Snake Royale 🐍</h1>
