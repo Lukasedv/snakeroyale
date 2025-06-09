@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  REGISTRY_NAME: snakeregistry
+  REGISTRY_NAME: snakeregistry  # Change this to your registry name
   IMAGE_NAME: snakeroyale
   RESOURCE_GROUP: snake-royale-rg
   CONTAINER_INSTANCE_NAME: snake-royale-ci
@@ -51,6 +51,26 @@ jobs:
         docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:latest
         
+    - name: Check if container exists
+      id: check_container
+      run: |
+        if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }} --query "name" --output tsv > /dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Delete existing container (if exists)
+      if: steps.check_container.outputs.exists == 'true'
+      run: |
+        echo "Deleting existing container..."
+        az container delete \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
+          --yes
+        echo "Waiting for container to be fully deleted..."
+        sleep 30
+    
     - name: Deploy to Azure Container Instances
       run: |
         az container create \
@@ -64,16 +84,33 @@ jobs:
           --ports 3000 \
           --cpu 2 \
           --memory 4 \
-          --environment-variables PORT=3000 NODE_ENV=production \
+          --environment-variables PORT=3000 NODE_ENV=production GITHUB_SHA=${{ github.sha }} \
           --restart-policy Always \
           --location swedencentral \
-          --os-type Linux \
-          --query ipAddress.fqdn \
-          --output tsv || \
-        az container update \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
-          --image ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          --os-type Linux
+          
+    - name: Wait for container to be ready
+      run: |
+        echo "Waiting for container to start..."
+        for i in {1..30}; do
+          STATUS=$(az container show \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_INSTANCE_NAME }} \
+            --query "instanceView.state" \
+            --output tsv 2>/dev/null || echo "NotFound")
+          
+          if [ "$STATUS" = "Running" ]; then
+            echo "Container is running!"
+            break
+          elif [ "$STATUS" = "Failed" ]; then
+            echo "Container failed to start!"
+            az container logs --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }}
+            exit 1
+          else
+            echo "Container status: $STATUS (attempt $i/30)"
+            sleep 10
+          fi
+        done
           
     - name: Get deployment URL
       run: |
@@ -82,6 +119,16 @@ jobs:
           --name ${{ env.CONTAINER_INSTANCE_NAME }} \
           --query ipAddress.fqdn \
           --output tsv)
-        echo "Deployment URL: http://$FQDN:3000"
-        echo "Spectator URL: http://$FQDN:3000/spectator.html"
-        echo "::notice::Game deployed to http://$FQDN:3000"
+        IP=$(az container show \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
+          --query ipAddress.ip \
+          --output tsv)
+        
+        echo "🎮 Game URL: http://$FQDN:3000"
+        echo "👥 Spectator URL: http://$FQDN:3000/spectator.html"
+        echo "📍 IP Address: $IP"
+        echo "🌍 Region: Sweden Central"
+        
+        echo "::notice title=Deployment Successful::Game deployed to http://$FQDN:3000"
+        echo "::notice title=Spectator View::Spectator view at http://$FQDN:3000/spectator.html"

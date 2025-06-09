@@ -13,6 +13,10 @@ const io = socketIo(server, {
   }
 });
 
+// Version info for CI/CD testing
+const VERSION = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.substring(0, 7) : 'dev';
+console.log(`🐍 Snake Royale starting - Version: ${VERSION}`);
+
 // Middleware
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -28,6 +32,15 @@ app.get('/spectator', (req, res) => {
 
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'spectator.html'));
+});
+
+// API endpoint for version info
+app.get('/api/version', (req, res) => {
+  res.json({ 
+    version: VERSION,
+    timestamp: new Date().toISOString(),
+    region: 'Sweden Central'
+  });
 });
 
 app.get('/health', (req, res) => {

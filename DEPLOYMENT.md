@@ -30,17 +30,19 @@ az group create --name snake-royale-rg --location swedencentral
 
 ### 1.2 Create Azure Container Registry
 ```bash
-az acr create --resource-group snake-royale-rg --name snakeregistry --sku Basic --location swedencentral
+az acr create --resource-group snake-royale-rg --name YOUR_REGISTRY_NAME --sku Basic --location swedencentral
 ```
+
+**Note**: Replace `YOUR_REGISTRY_NAME` with a unique name (e.g., "snakeregistry")
 
 ### 1.3 Enable Admin Access
 ```bash
-az acr update -n snakeregistry --admin-enabled true
+az acr update -n YOUR_REGISTRY_NAME --admin-enabled true
 ```
 
 ### 1.4 Get Registry Credentials
 ```bash
-az acr credential show --name snakeregistry
+az acr credential show --name YOUR_REGISTRY_NAME
 ```
 Save the username and password for later use.
 
@@ -77,13 +79,13 @@ If you prefer manual deployment:
 ### 4.1 Build and Push Docker Image
 ```bash
 # Build the image
-docker build -t snakeregistry.azurecr.io/snakeroyale:latest .
+docker build -t YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest .
 
 # Log in to ACR
-az acr login --name snakeregistry
+az acr login --name YOUR_REGISTRY_NAME
 
 # Push the image
-docker push snakeregistry.azurecr.io/snakeroyale:latest
+docker push YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest
 ```
 
 ### 4.2 Deploy to Container Instances
@@ -91,8 +93,8 @@ docker push snakeregistry.azurecr.io/snakeroyale:latest
 az container create \
   --resource-group snake-royale-rg \
   --name snake-royale-ci \
-  --image snakeregistry.azurecr.io/snakeroyale:latest \
-  --registry-login-server snakeregistry.azurecr.io \
+  --image YOUR_REGISTRY_NAME.azurecr.io/snakeroyale:latest \
+  --registry-login-server YOUR_REGISTRY_NAME.azurecr.io \
   --registry-username [ACR_USERNAME] \
   --registry-password [ACR_PASSWORD] \
   --dns-name-label snake-royale-unique \
