@@ -256,6 +256,11 @@ class SnakeRoyaleGame {
                 this.hideRespawnUI();
             }
             
+            // Handle first-time initialization when player dies before wasAlive is set
+            if (this.wasAlive === null && !isAlive) {
+                this.onPlayerDeath();
+            }
+            
             this.wasAlive = isAlive;
             document.getElementById('statusText').textContent = isAlive ? 'Alive' : 'Dead';
         }
