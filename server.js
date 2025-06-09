@@ -39,6 +39,7 @@ console.log(`🐍 Snake Royale starting - Version: ${VERSION}`);
 // Middleware
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json()); // Add JSON body parser for authentication
 
 // Routes
 app.get('/', (req, res) => {
@@ -60,6 +61,18 @@ app.get('/api/version', (req, res) => {
     timestamp: new Date().toISOString(),
     region: 'Sweden Central'
   });
+});
+
+// API endpoint for spectator authentication
+app.post('/api/authenticate', (req, res) => {
+  const { password } = req.body;
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'; // Default for development
+  
+  if (password === adminPassword) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Invalid password' });
+  }
 });
 
 app.get('/health', (req, res) => {

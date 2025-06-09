@@ -493,6 +493,42 @@ function toggleKeynoteMode() {
 // Initialize spectator when page loads
 let spectator;
 
+// Authentication functions
+function authenticate() {
+    const password = document.getElementById('passwordInput').value;
+    
+    fetch('/api/authenticate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('spectatorView').style.display = 'flex';
+            spectator = new SpectatorView();
+        } else {
+            document.getElementById('authError').style.display = 'block';
+            document.getElementById('passwordInput').value = '';
+            document.getElementById('passwordInput').focus();
+        }
+    })
+    .catch(error => {
+        console.error('Authentication error:', error);
+        document.getElementById('authError').style.display = 'block';
+    });
+}
+
+function handlePasswordKeypress(event) {
+    if (event.key === 'Enter') {
+        authenticate();
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    spectator = new SpectatorView();
+    // Focus on password input when page loads
+    document.getElementById('passwordInput').focus();
 });
