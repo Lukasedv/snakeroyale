@@ -224,8 +224,9 @@ class SnakeRoyaleGame {
     updateUI() {
         if (!this.gameState) return;
         
-        // Update player count
-        document.getElementById('playerCount').textContent = `Players: ${this.gameState.players.length}`;
+        // Update player count (only count connected players)
+        const connectedPlayers = this.gameState.players.filter(p => !p.disconnected);
+        document.getElementById('playerCount').textContent = `Players: ${connectedPlayers.length}`;
         
         // Update game status
         let statusText = '';
@@ -242,9 +243,10 @@ class SnakeRoyaleGame {
         }
         document.getElementById('gameStatusText').textContent = statusText;
         
-        // Update player score
+        // Update player score and info
         const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
         if (currentPlayer) {
+            document.getElementById('playerName').textContent = currentPlayer.name;
             document.getElementById('playerScore').textContent = currentPlayer.score;
             
             const isAlive = currentPlayer.alive;
