@@ -158,13 +158,15 @@ class SpectatorView {
         
         leaderboardElement.innerHTML = leaderboard.map((player, index) => {
             const statusClass = player.alive ? 'alive' : 'dead';
-            const statusIcon = player.alive ? '🐍' : '💀';
+            const playerType = player.isNPC ? '🤖' : '🐍';
+            const statusIcon = player.alive ? playerType : '💀';
             const rank = index + 1;
+            const namePrefix = player.isNPC ? '🤖 ' : '';
             
             return `
                 <div class="leaderboard-item">
                     <div>
-                        <span class="player-name">${rank}. ${player.name}</span>
+                        <span class="player-name">${rank}. ${namePrefix}${player.name}</span>
                         <br>
                         <span class="player-status ${statusClass}">${statusIcon} ${player.alive ? 'Alive' : 'Dead'}</span>
                     </div>
@@ -244,6 +246,13 @@ class SpectatorView {
         // Draw grid
         this.drawGrid();
         
+        // Draw food
+        if (this.gameState.food) {
+            this.gameState.food.forEach(food => {
+                this.drawFood(food, scaleX, scaleY);
+            });
+        }
+        
         // Draw all snakes
         this.gameState.players.forEach(player => {
             if (player.alive) {
@@ -282,6 +291,29 @@ class SpectatorView {
         }
     }
     
+    drawFood(food, scaleX, scaleY) {
+        const x = food.x * scaleX;
+        const y = food.y * scaleY;
+        const size = 16; // Larger for spectator view
+        
+        // Draw food as a glowing circle
+        this.ctx.fillStyle = '#ff6b6b';
+        this.ctx.shadowColor = '#ff6b6b';
+        this.ctx.shadowBlur = 15;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size/2, 0, 2 * Math.PI);
+        this.ctx.fill();
+        
+        // Reset shadow
+        this.ctx.shadowBlur = 0;
+        
+        // Draw inner highlight
+        this.ctx.fillStyle = '#ffaaaa';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, size/4, 0, 2 * Math.PI);
+        this.ctx.fill();
+    }
+
     drawSnake(player, scaleX, scaleY) {
         const snake = player.snake;
         
@@ -317,10 +349,10 @@ class SpectatorView {
             this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
             this.ctx.fillRect(x - 30, y - 25, 60, 16);
             
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 12px Arial';
+            this.ctx.fillStyle = player.isNPC ? '#ffaa00' : '#ffffff';
+            this.ctx.font = player.isNPC ? 'italic bold 12px Arial' : 'bold 12px Arial';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(player.name, x, y - 12);
+            this.ctx.fillText(player.isNPC ? `🤖 ${player.name}` : player.name, x, y - 12);
         }
     }
     

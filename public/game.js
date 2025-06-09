@@ -160,9 +160,12 @@ class SnakeRoyaleGame {
             .slice(0, 10);
         
         const leaderboardList = document.getElementById('leaderboardList');
-        leaderboardList.innerHTML = leaderboard.map((player, index) => 
-            `<div>${index + 1}. ${player.name} (${player.alive ? '🐍' : '💀'}) - ${player.score}</div>`
-        ).join('');
+        leaderboardList.innerHTML = leaderboard.map((player, index) => {
+            const playerType = player.isNPC ? '🤖' : '🐍';
+            const status = player.alive ? playerType : '💀';
+            const namePrefix = player.isNPC ? '🤖 ' : '';
+            return `<div>${index + 1}. ${namePrefix}${player.name} (${status}) - ${player.score}</div>`;
+        }).join('');
     }
     
     updateStatus(message) {
@@ -205,6 +208,7 @@ class SnakeRoyaleGame {
     drawSnake(player) {
         const snake = player.snake;
         const isCurrentPlayer = player.id === this.playerId;
+        const isNPC = player.isNPC;
         
         snake.body.forEach((segment, index) => {
             this.ctx.fillStyle = index === 0 ? 
@@ -230,11 +234,11 @@ class SnakeRoyaleGame {
         // Draw player name
         if (snake.body.length > 0) {
             const head = snake.body[0];
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = '12px Arial';
+            this.ctx.fillStyle = isNPC ? '#ffaa00' : '#ffffff';
+            this.ctx.font = isNPC ? 'italic 12px Arial' : '12px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(
-                player.name, 
+                isNPC ? `🤖 ${player.name}` : player.name, 
                 head.x, 
                 head.y - 10
             );
