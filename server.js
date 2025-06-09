@@ -17,16 +17,41 @@ const io = socketIo(server, {
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Routes
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/spectator', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'spectator.html'));
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'spectator.html'));
+});
+
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'healthy', 
+    players: gameState.players.size,
+    spectators: gameState.spectators.size,
+    gameStatus: gameState.gameStatus,
+    uptime: process.uptime()
+  });
+});
+
 // Game state
 const gameState = {
   players: new Map(),
+  spectators: new Set(),
   gameArea: {
     width: 800,
     height: 600,
     shrinkRate: 0.1 // pixels per second
   },
   gameStatus: 'waiting', // waiting, playing, ended
-  lastUpdate: Date.now()
+  lastUpdate: Date.now(),
+  round: 1
 };
 
 // Socket handling
@@ -39,13 +64,26 @@ io.on('connection', (socket) => {
       id: socket.id,
       name: playerData.name || `Player${Math.floor(Math.random() * 1000)}`,
       snake: {
-        body: [{x: Math.random() * 700 + 50, y: Math.random() * 500 + 50}],
+        body: [{
+          x: Math.random() * (gameState.gameArea.width - 100) + 50, 
+          y: Math.random() * (gameState.gameArea.height - 100) + 50
+        }],
         direction: { x: 1, y: 0 },
-        color: `hsl(${Math.random() * 360}, 70%, 50%)`
+        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+        length: 5 // Starting length
       },
       score: 0,
-      alive: true
+      alive: true,
+      joinTime: Date.now()
     };
+    
+    // Initialize snake body with starting length
+    for (let i = 1; i < player.snake.length; i++) {
+      player.snake.body.push({
+        x: player.snake.body[0].x - i * 10,
+        y: player.snake.body[0].y
+      });
+    }
     
     gameState.players.set(socket.id, player);
     socket.emit('gameJoined', { playerId: socket.id, gameState });
@@ -67,11 +105,41 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Spectator joins
+  socket.on('joinSpectator', () => {
+    gameState.spectators.add(socket.id);
+    socket.emit('gameJoined', { playerId: null, gameState });
+    console.log(`Spectator joined. Socket ID: ${socket.id}`);
+  });
+
+  // Admin controls
+  socket.on('adminRestart', () => {
+    console.log('Admin restart requested');
+    restartGame();
+    io.emit('gameRestarted');
+  });
+
+  socket.on('adminPause', () => {
+    console.log('Admin pause requested');
+    gameState.gameStatus = gameState.gameStatus === 'playing' ? 'paused' : 'playing';
+  });
+
+  socket.on('adminClearPlayers', () => {
+    console.log('Admin clear players requested');
+    gameState.players.clear();
+    io.emit('playersCleared');
+  });
+
   // Player disconnects
   socket.on('disconnect', () => {
-    gameState.players.delete(socket.id);
-    socket.broadcast.emit('playerLeft', socket.id);
-    console.log('Player disconnected:', socket.id);
+    if (gameState.players.has(socket.id)) {
+      gameState.players.delete(socket.id);
+      socket.broadcast.emit('playerLeft', socket.id);
+      console.log('Player disconnected:', socket.id);
+    } else if (gameState.spectators.has(socket.id)) {
+      gameState.spectators.delete(socket.id);
+      console.log('Spectator disconnected:', socket.id);
+    }
   });
 });
 
@@ -108,12 +176,21 @@ function gameLoop() {
   io.emit('gameUpdate', {
     players: Array.from(gameState.players.values()),
     gameArea: gameState.gameArea,
-    gameStatus: gameState.gameStatus
+    gameStatus: gameState.gameStatus,
+    round: gameState.round
   });
 }
 
+function restartGame() {
+  gameState.players.clear();
+  gameState.gameStatus = 'waiting';
+  gameState.round++;
+  gameState.lastUpdate = Date.now();
+  console.log(`Game restarted. Round ${gameState.round}`);
+}
+
 function updateSnake(snake, deltaTime) {
-  const speed = 100; // pixels per second
+  const speed = 80; // pixels per second
   const head = snake.body[0];
   const newHead = {
     x: head.x + snake.direction.x * speed * deltaTime,
@@ -122,8 +199,8 @@ function updateSnake(snake, deltaTime) {
   
   snake.body.unshift(newHead);
   
-  // Keep snake length constant for now (can add growth mechanics later)
-  if (snake.body.length > 10) {
+  // Maintain snake length - remove tail if too long
+  while (snake.body.length > snake.length) {
     snake.body.pop();
   }
 }
@@ -133,17 +210,19 @@ function checkCollisions(player) {
   const head = snake.body[0];
   
   // Check wall collision
-  if (head.x < 0 || head.x > gameState.gameArea.width || 
-      head.y < 0 || head.y > gameState.gameArea.height) {
+  if (head.x < 10 || head.x > gameState.gameArea.width - 10 || 
+      head.y < 10 || head.y > gameState.gameArea.height - 10) {
     player.alive = false;
+    console.log(`Player ${player.name} hit wall`);
     return;
   }
   
-  // Check self collision
-  for (let i = 4; i < snake.body.length; i++) {
-    if (Math.abs(head.x - snake.body[i].x) < 10 && 
-        Math.abs(head.y - snake.body[i].y) < 10) {
+  // Check self collision (skip first few segments to allow turning)
+  for (let i = 8; i < snake.body.length; i++) {
+    if (Math.abs(head.x - snake.body[i].x) < 8 && 
+        Math.abs(head.y - snake.body[i].y) < 8) {
       player.alive = false;
+      console.log(`Player ${player.name} hit themselves`);
       return;
     }
   }
@@ -151,14 +230,28 @@ function checkCollisions(player) {
   // Check collision with other snakes
   gameState.players.forEach((otherPlayer) => {
     if (otherPlayer.id !== player.id && otherPlayer.alive) {
-      otherPlayer.snake.body.forEach((segment) => {
-        if (Math.abs(head.x - segment.x) < 10 && 
-            Math.abs(head.y - segment.y) < 10) {
+      otherPlayer.snake.body.forEach((segment, index) => {
+        if (Math.abs(head.x - segment.x) < 12 && 
+            Math.abs(head.y - segment.y) < 12) {
           player.alive = false;
+          
+          // Award points to the other player if they killed someone with their head
+          if (index === 0) {
+            otherPlayer.score += 10;
+            console.log(`Player ${otherPlayer.name} eliminated ${player.name}`);
+          } else {
+            console.log(`Player ${player.name} hit ${otherPlayer.name}'s body`);
+          }
         }
       });
     }
   });
+  
+  // Award survival points over time
+  if (player.alive) {
+    const survivalTime = Date.now() - player.joinTime;
+    player.score = Math.floor(survivalTime / 1000); // 1 point per second of survival
+  }
 }
 
 // Start game loop
