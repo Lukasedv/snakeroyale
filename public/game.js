@@ -9,6 +9,7 @@ class SnakeRoyaleGame {
         this.lastDirection = { x: 1, y: 0 };
         this.respawnTimer = null;
         this.deathTime = null;
+        this.wasAlive = true; // Track previous alive state
         
         this.initializeSocket();
         this.setupKeyboardControls();
@@ -245,17 +246,18 @@ class SnakeRoyaleGame {
         const currentPlayer = this.gameState.players.find(p => p.id === this.playerId);
         if (currentPlayer) {
             document.getElementById('playerScore').textContent = currentPlayer.score;
-            const wasAlive = document.getElementById('statusText').textContent === 'Alive';
+            
             const isAlive = currentPlayer.alive;
             
-            document.getElementById('statusText').textContent = isAlive ? 'Alive' : 'Dead';
-            
             // Handle death state change
-            if (wasAlive && !isAlive) {
+            if (this.wasAlive && !isAlive) {
                 this.onPlayerDeath();
-            } else if (!wasAlive && isAlive) {
+            } else if (!this.wasAlive && isAlive) {
                 this.hideRespawnUI();
             }
+            
+            this.wasAlive = isAlive;
+            document.getElementById('statusText').textContent = isAlive ? 'Alive' : 'Dead';
         }
         
         // Update leaderboard
