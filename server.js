@@ -54,6 +54,14 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Collision detection constants - standardized across all functions
+const COLLISION_CONSTANTS = {
+  SNAKE_COLLISION_THRESHOLD: 12,  // Distance for snake-to-snake collisions
+  FOOD_COLLISION_THRESHOLD: 15,   // Distance for snake-to-food collisions
+  WALL_MARGIN: 15,                // Distance from walls for safety checks
+  SELF_COLLISION_SKIP_SEGMENTS: 8 // Number of head segments to skip for self-collision
+};
+
 // Game state
 const gameState = {
   players: new Map(),
@@ -364,8 +372,8 @@ function willHitWall(npc) {
   const nextX = head.x + dir.x * 40; // Look ahead 40 pixels
   const nextY = head.y + dir.y * 40;
   
-  return nextX < 20 || nextX > gameState.gameArea.width - 20 || 
-         nextY < 20 || nextY > gameState.gameArea.height - 20;
+  return nextX < COLLISION_CONSTANTS.WALL_MARGIN || nextX > gameState.gameArea.width - COLLISION_CONSTANTS.WALL_MARGIN || 
+         nextY < COLLISION_CONSTANTS.WALL_MARGIN || nextY > gameState.gameArea.height - COLLISION_CONSTANTS.WALL_MARGIN;
 }
 
 function willHitSnake(npc) {
@@ -374,10 +382,11 @@ function willHitSnake(npc) {
   const nextX = head.x + dir.x * 30; // Look ahead 30 pixels
   const nextY = head.y + dir.y * 30;
   
-  // Check collision with self (skip first segment)
-  for (let i = 4; i < npc.snake.body.length; i++) {
+  // Check collision with self (skip first segments to match actual collision detection)
+  for (let i = COLLISION_CONSTANTS.SELF_COLLISION_SKIP_SEGMENTS; i < npc.snake.body.length; i++) {
     const segment = npc.snake.body[i];
-    if (Math.abs(nextX - segment.x) < 15 && Math.abs(nextY - segment.y) < 15) {
+    if (Math.abs(nextX - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
+        Math.abs(nextY - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
       return true;
     }
   }
@@ -387,7 +396,8 @@ function willHitSnake(npc) {
   for (const other of allSnakes) {
     if (other.id !== npc.id && other.alive) {
       for (const segment of other.snake.body) {
-        if (Math.abs(nextX - segment.x) < 15 && Math.abs(nextY - segment.y) < 15) {
+        if (Math.abs(nextX - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
+            Math.abs(nextY - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
           return true;
         }
       }
@@ -416,9 +426,9 @@ function getSafeDirections(npc) {
     const testX = head.x + dir.x * 30;
     const testY = head.y + dir.y * 30;
     
-    // Check walls
-    if (testX < 20 || testX > gameState.gameArea.width - 20 || 
-        testY < 20 || testY > gameState.gameArea.height - 20) {
+    // Check walls - use same margin as actual collision detection
+    if (testX < COLLISION_CONSTANTS.WALL_MARGIN || testX > gameState.gameArea.width - COLLISION_CONSTANTS.WALL_MARGIN || 
+        testY < COLLISION_CONSTANTS.WALL_MARGIN || testY > gameState.gameArea.height - COLLISION_CONSTANTS.WALL_MARGIN) {
       return false;
     }
     
@@ -426,9 +436,10 @@ function getSafeDirections(npc) {
     const allSnakes = [...gameState.players.values(), ...gameState.npcs.values()];
     for (const other of allSnakes) {
       if (other.alive) {
-        for (let i = (other.id === npc.id ? 4 : 0); i < other.snake.body.length; i++) {
+        for (let i = (other.id === npc.id ? COLLISION_CONSTANTS.SELF_COLLISION_SKIP_SEGMENTS : 0); i < other.snake.body.length; i++) {
           const segment = other.snake.body[i];
-          if (Math.abs(testX - segment.x) < 15 && Math.abs(testY - segment.y) < 15) {
+          if (Math.abs(testX - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
+              Math.abs(testY - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
             return false;
           }
         }
@@ -496,7 +507,8 @@ function spawnFood() {
     for (const player of allSnakes) {
       if (player.alive) {
         for (const segment of player.snake.body) {
-          if (Math.abs(food.x - segment.x) < 25 && Math.abs(food.y - segment.y) < 25) {
+          if (Math.abs(food.x - segment.x) < COLLISION_CONSTANTS.FOOD_COLLISION_THRESHOLD + 10 && 
+              Math.abs(food.y - segment.y) < COLLISION_CONSTANTS.FOOD_COLLISION_THRESHOLD + 10) {
             tooClose = true;
             break;
           }
@@ -515,18 +527,18 @@ function checkCollisions(player) {
   const snake = player.snake;
   const head = snake.body[0];
   
-  // Check wall collision
-  if (head.x < 10 || head.x > gameState.gameArea.width - 10 || 
-      head.y < 10 || head.y > gameState.gameArea.height - 10) {
+  // Check wall collision - use same margin as prediction functions
+  if (head.x < COLLISION_CONSTANTS.WALL_MARGIN || head.x > gameState.gameArea.width - COLLISION_CONSTANTS.WALL_MARGIN || 
+      head.y < COLLISION_CONSTANTS.WALL_MARGIN || head.y > gameState.gameArea.height - COLLISION_CONSTANTS.WALL_MARGIN) {
     player.alive = false;
     console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit wall`);
     return;
   }
   
   // Check self collision (skip first few segments to allow turning)
-  for (let i = 8; i < snake.body.length; i++) {
-    if (Math.abs(head.x - snake.body[i].x) < 8 && 
-        Math.abs(head.y - snake.body[i].y) < 8) {
+  for (let i = COLLISION_CONSTANTS.SELF_COLLISION_SKIP_SEGMENTS; i < snake.body.length; i++) {
+    if (Math.abs(head.x - snake.body[i].x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
+        Math.abs(head.y - snake.body[i].y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
       player.alive = false;
       console.log(`${player.isNPC ? 'NPC' : 'Player'} ${player.name} hit themselves`);
       return;
@@ -535,7 +547,8 @@ function checkCollisions(player) {
   
   // Check food collision
   gameState.food.forEach((food, index) => {
-    if (Math.abs(head.x - food.x) < 15 && Math.abs(head.y - food.y) < 15) {
+    if (Math.abs(head.x - food.x) < COLLISION_CONSTANTS.FOOD_COLLISION_THRESHOLD && 
+        Math.abs(head.y - food.y) < COLLISION_CONSTANTS.FOOD_COLLISION_THRESHOLD) {
       // Player ate food
       player.foodScore = (player.foodScore || 0) + food.value;
       player.snake.length += 3; // Grow snake
@@ -556,8 +569,8 @@ function checkCollisions(player) {
   allOtherSnakes.forEach((otherPlayer) => {
     if (otherPlayer.alive) {
       otherPlayer.snake.body.forEach((segment, index) => {
-        if (Math.abs(head.x - segment.x) < 12 && 
-            Math.abs(head.y - segment.y) < 12) {
+        if (Math.abs(head.x - segment.x) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD && 
+            Math.abs(head.y - segment.y) < COLLISION_CONSTANTS.SNAKE_COLLISION_THRESHOLD) {
           player.alive = false;
           
           // Award points to the other player if they killed someone with their head
