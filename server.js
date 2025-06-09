@@ -59,7 +59,7 @@ const COLLISION_CONSTANTS = {
   SNAKE_COLLISION_THRESHOLD: 12,  // Distance for snake-to-snake collisions
   FOOD_COLLISION_THRESHOLD: 15,   // Distance for snake-to-food collisions
   WALL_MARGIN: 15,                // Distance from walls for safety checks
-  SELF_COLLISION_SKIP_SEGMENTS: 8 // Number of head segments to skip for self-collision
+  SELF_COLLISION_SKIP_SEGMENTS: 15 // Number of head segments to skip for self-collision
 };
 
 // Game state
