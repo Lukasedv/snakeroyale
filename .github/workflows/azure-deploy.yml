@@ -92,26 +92,6 @@ jobs:
         echo "Waiting for container to be fully deleted..."
         sleep 30
     
-    - name: Check if container exists
-      id: check_container
-      run: |
-        if ! az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }} --query "name" --output tsv > /dev/null 2>&1; then
-            echo "exists=false" >> $GITHUB_OUTPUT
-        else
-            echo "exists=true" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Delete existing container (if exists)
-      if: steps.check_container.outputs.exists == 'true'
-      run: |
-        echo "Deleting existing container..."
-        az container delete \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
-          --yes
-        echo "Waiting for container to be fully deleted..."
-        sleep 30
-    
     - name: Deploy to Azure Container Instances
       run: |
         az container create \
