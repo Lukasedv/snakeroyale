@@ -26,16 +26,19 @@ jobs:
           echo "CONTAINER_INSTANCE_NAME=snake-royale-prod-ci" >> $GITHUB_ENV
           echo "DNS_NAME_LABEL=snake-royale-prod" >> $GITHUB_ENV
           echo "NODE_ENV=production" >> $GITHUB_ENV
+          echo "USE_HTTPS=true" >> $GITHUB_ENV
         elif [ "${{ github.event_name }}" == "pull_request" ]; then
           echo "ENVIRONMENT=dev" >> $GITHUB_ENV
           echo "CONTAINER_INSTANCE_NAME=snake-royale-dev-ci" >> $GITHUB_ENV
           echo "DNS_NAME_LABEL=snake-royale-dev-pr-${{ github.event.number }}" >> $GITHUB_ENV
           echo "NODE_ENV=development" >> $GITHUB_ENV
+          echo "USE_HTTPS=true" >> $GITHUB_ENV
         else
           echo "ENVIRONMENT=dev" >> $GITHUB_ENV
           echo "CONTAINER_INSTANCE_NAME=snake-royale-dev-ci" >> $GITHUB_ENV
           echo "DNS_NAME_LABEL=snake-royale-dev-${{ github.run_number }}" >> $GITHUB_ENV
           echo "NODE_ENV=development" >> $GITHUB_ENV
+          echo "USE_HTTPS=true" >> $GITHUB_ENV
         fi
       
     - name: Set up Node.js
@@ -89,6 +92,26 @@ jobs:
         echo "Waiting for container to be fully deleted..."
         sleep 30
     
+    - name: Check if container exists
+      id: check_container
+      run: |
+        if ! az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }} --query "name" --output tsv > /dev/null 2>&1; then
+            echo "exists=false" >> $GITHUB_OUTPUT
+        else
+            echo "exists=true" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Delete existing container (if exists)
+      if: steps.check_container.outputs.exists == 'true'
+      run: |
+        echo "Deleting existing container..."
+        az container delete \
+          --resource-group ${{ env.RESOURCE_GROUP }} \
+          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
+          --yes
+        echo "Waiting for container to be fully deleted..."
+        sleep 30
+    
     - name: Deploy to Azure Container Instances
       run: |
         az container create \
@@ -99,10 +122,10 @@ jobs:
             --registry-username ${{ secrets.ACR_USERNAME }} \
             --registry-password ${{ secrets.ACR_PASSWORD }} \
             --dns-name-label ${{ env.DNS_NAME_LABEL }} \
-            --ports 3000 \
+            --ports 3000 443 \
             --cpu 2 \
             --memory 4 \
-            --environment-variables PORT=3000 NODE_ENV=${{ env.NODE_ENV }} GITHUB_SHA=${{ github.sha }} ENVIRONMENT=${{ env.ENVIRONMENT }} \
+            --environment-variables PORT=3000 NODE_ENV=${{ env.NODE_ENV }} GITHUB_SHA=${{ github.sha }} ENVIRONMENT=${{ env.ENVIRONMENT }} USE_HTTPS=${{ env.USE_HTTPS }} \
             --restart-policy Always \
             --location swedencentral \
             --os-type Linux || {
@@ -151,15 +174,19 @@ jobs:
         echo "📍 IP Address: $IP"
         echo "🌍 Region: Sweden Central"
         echo "🚀 Environment: ${{ env.ENVIRONMENT }}"
+        echo "🔐 HTTPS Ready: SSL termination available via Azure Application Gateway"
         
         if [ "${{ env.ENVIRONMENT }}" == "prod" ]; then
           echo "::notice title=Production Deployment Successful::Game deployed to http://$FQDN:3000"
           echo "::notice title=Stable Production URL::This URL will remain consistent across deployments"
+          echo "::notice title=HTTPS Ready::Configure Azure Application Gateway for SSL termination"
         elif [ "${{ github.event_name }}" == "pull_request" ]; then
           echo "::notice title=Development Deployment Successful::Dev environment deployed to http://$FQDN:3000"
           echo "::notice title=PR Environment::This is a temporary dev environment for PR #${{ github.event.number }}"
+          echo "::notice title=HTTPS Ready::Configure Azure Application Gateway for SSL termination"
         else
           echo "::notice title=Development Deployment Successful::Dev environment deployed to http://$FQDN:3000"
           echo "::notice title=Dev Environment::This is a temporary development environment"
+          echo "::notice title=HTTPS Ready::Configure Azure Application Gateway for SSL termination"
         fi
         echo "::notice title=Spectator View::Spectator view at http://$FQDN:3000/spectator.html"

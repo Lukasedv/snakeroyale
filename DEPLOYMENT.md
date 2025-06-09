@@ -184,11 +184,113 @@ az containerapp create \
   --memory 4Gi
 ```
 
-## Step 7: Custom Domain (Optional)
+## Step 7: HTTPS Setup (Production Recommended)
 
-1. **Register a domain** or use a subdomain
-2. **Set up DNS** to point to your container instance
-3. **Configure SSL** using Azure Application Gateway or Cloudflare
+### Option A: Azure Application Gateway (Recommended)
+
+For production deployments, enable HTTPS using Azure Application Gateway:
+
+1. **Run the HTTPS setup script**:
+   ```bash
+   ./azure-https-setup.sh
+   ```
+
+2. **Or manually configure**:
+   ```bash
+   # Create Virtual Network
+   az network vnet create \
+     --resource-group snake-royale-rg \
+     --name snake-royale-vnet \
+     --address-prefix 10.0.0.0/16 \
+     --subnet-name appgw-subnet \
+     --subnet-prefix 10.0.1.0/24
+
+   # Create Public IP
+   az network public-ip create \
+     --resource-group snake-royale-rg \
+     --name snake-royale-appgw-ip \
+     --allocation-method Static \
+     --sku Standard \
+     --dns-name snake-royale-https
+
+   # Get container IP
+   CONTAINER_IP=$(az container show \
+     --resource-group snake-royale-rg \
+     --name snake-royale-prod-ci \
+     --query ipAddress.ip --output tsv)
+
+   # Create Application Gateway
+   az network application-gateway create \
+     --resource-group snake-royale-rg \
+     --name snake-royale-appgw \
+     --vnet-name snake-royale-vnet \
+     --subnet appgw-subnet \
+     --public-ip-address snake-royale-appgw-ip \
+     --servers $CONTAINER_IP \
+     --http-settings-port 3000 \
+     --frontend-port 443 \
+     --capacity 2
+   ```
+
+3. **Configure SSL Certificate**:
+   - Obtain SSL certificate for your domain
+   - Upload to Application Gateway:
+   ```bash
+   az network application-gateway ssl-cert create \
+     --resource-group snake-royale-rg \
+     --gateway-name snake-royale-appgw \
+     --name ssl-cert \
+     --cert-file /path/to/certificate.pfx \
+     --cert-password YourPassword
+   ```
+
+### Option B: Azure Front Door (Global CDN)
+
+For global distribution with HTTPS:
+
+1. **Create Front Door profile**:
+   ```bash
+   az afd profile create \
+     --resource-group snake-royale-rg \
+     --profile-name snake-royale-fd \
+     --sku Standard_AzureFrontDoor
+   ```
+
+2. **Configure endpoint and origin**:
+   ```bash
+   # Get container FQDN
+   CONTAINER_FQDN=$(az container show \
+     --resource-group snake-royale-rg \
+     --name snake-royale-prod-ci \
+     --query ipAddress.fqdn --output tsv)
+
+   # Create origin
+   az afd origin create \
+     --resource-group snake-royale-rg \
+     --profile-name snake-royale-fd \
+     --origin-group-name default \
+     --origin-name container-origin \
+     --host-name $CONTAINER_FQDN \
+     --origin-host-header $CONTAINER_FQDN \
+     --http-port 3000
+   ```
+
+### HTTPS Configuration Status
+
+The application is **HTTPS-ready** with the following features:
+- ✅ Server supports HTTPS when certificates are available
+- ✅ Environment variables control HTTP/HTTPS mode
+- ✅ Automatic fallback to HTTP when certificates are missing
+- ✅ WebSocket connections automatically adapt to protocol
+- ✅ Ready for Azure Application Gateway SSL termination
+
+**Current URLs** (before SSL termination):
+- Game: `http://[container-fqdn]:3000`
+- Spectator: `http://[container-fqdn]:3000/spectator.html`
+
+**After HTTPS setup**:
+- Game: `https://[your-domain]`
+- Spectator: `https://[your-domain]/spectator.html`
 
 ## Step 8: Monitoring and Maintenance
 
@@ -278,10 +380,13 @@ az group delete --name snake-royale-rg --yes --no-wait
 
 ## Security Considerations
 
-1. **Enable HTTPS** in production
-2. **Use Azure Key Vault** for secrets
-3. **Configure network security groups** if needed
-4. **Regular security updates** of base images
+1. **HTTPS Enabled** ✅ - Application supports HTTPS with Azure Application Gateway
+2. **SSL Termination** - Use Azure Application Gateway or Azure Front Door
+3. **Certificate Management** - Use Azure Key Vault for certificate storage
+4. **Environment Variables** - USE_HTTPS=true enables HTTPS mode
+5. **Network Security** - Configure network security groups if needed
+6. **Container Security** - Regular security updates of base images
+7. **Secret Management** - Use Azure Key Vault for sensitive data
 
 ## Support
 
