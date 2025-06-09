@@ -66,6 +66,8 @@ jobs:
           --memory 4 \
           --environment-variables PORT=3000 NODE_ENV=production \
           --restart-policy Always \
+          --location swedencentral \
+          --os-type Linux \
           --query ipAddress.fqdn \
           --output tsv || \
         az container update \

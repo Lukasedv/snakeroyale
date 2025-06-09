@@ -25,12 +25,12 @@ The deployment uses Azure Container Instances (ACI) which is ideal for this type
 
 ### 1.1 Create Resource Group
 ```bash
-az group create --name snake-royale-rg --location eastus
+az group create --name snake-royale-rg --location swedencentral
 ```
 
 ### 1.2 Create Azure Container Registry
 ```bash
-az acr create --resource-group snake-royale-rg --name snakeregistry --sku Basic --location eastus
+az acr create --resource-group snake-royale-rg --name snakeregistry --sku Basic --location swedencentral
 ```
 
 ### 1.3 Enable Admin Access
@@ -100,14 +100,16 @@ az container create \
   --cpu 2 \
   --memory 4 \
   --environment-variables PORT=3000 NODE_ENV=production \
-  --restart-policy Always
+  --restart-policy Always \
+  --location swedencentral \
+  --os-type Linux
 ```
 
 ## Step 5: Access Your Game
 
 After deployment, you'll get URLs like:
-- **Player Game**: `http://snake-royale-unique.eastus.azurecontainer.io:3000`
-- **Spectator View**: `http://snake-royale-unique.eastus.azurecontainer.io:3000/spectator.html`
+- **Player Game**: `http://snake-royale-sweden.swedencentral.azurecontainer.io:3000`
+- **Spectator View**: `http://snake-royale-sweden.swedencentral.azurecontainer.io:3000/spectator.html`
 
 ## Step 6: Scaling for Events
 
