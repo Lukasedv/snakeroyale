@@ -242,12 +242,14 @@ function gameLoop() {
       }
     });
 
-    // Check win condition - count all alive entities
+    // Check win condition - only restart if no human players remain at all
     const aliveHumans = Array.from(gameState.players.values()).filter(p => p.alive);
     const aliveNPCs = Array.from(gameState.npcs.values()).filter(p => p.alive);
     const totalAlive = aliveHumans.length + aliveNPCs.length;
+    const totalHumans = gameState.players.size; // Total humans (alive + dead)
     
-    if (totalAlive <= 1 && !gameState.restartScheduled) {
+    // Only auto-restart if there are no human players left at all, OR if only 1 entity total is alive AND no humans exist
+    if ((totalHumans === 0 && totalAlive <= 1) && !gameState.restartScheduled) {
       const winner = aliveHumans[0] || aliveNPCs[0] || null;
       io.emit('gameEnded', { winner });
       

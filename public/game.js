@@ -9,7 +9,7 @@ class SnakeRoyaleGame {
         this.lastDirection = { x: 1, y: 0 };
         this.respawnTimer = null;
         this.deathTime = null;
-        this.wasAlive = true; // Track previous alive state
+        this.wasAlive = null; // Track previous alive state - initialize to null
         
         this.initializeSocket();
         this.setupKeyboardControls();
@@ -250,9 +250,9 @@ class SnakeRoyaleGame {
             const isAlive = currentPlayer.alive;
             
             // Handle death state change
-            if (this.wasAlive && !isAlive) {
+            if (this.wasAlive === true && !isAlive) {
                 this.onPlayerDeath();
-            } else if (!this.wasAlive && isAlive) {
+            } else if (this.wasAlive === false && isAlive) {
                 this.hideRespawnUI();
             }
             
