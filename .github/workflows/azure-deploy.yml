@@ -54,10 +54,10 @@ jobs:
     - name: Check if container exists
       id: check_container
       run: |
-        if az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }} --query "name" --output tsv > /dev/null 2>&1; then
-          echo "exists=true" >> $GITHUB_OUTPUT
+        if ! az container show --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.CONTAINER_INSTANCE_NAME }} --query "name" --output tsv > /dev/null 2>&1; then
+            echo "exists=false" >> $GITHUB_OUTPUT
         else
-          echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=true" >> $GITHUB_OUTPUT
         fi
     
     - name: Delete existing container (if exists)
@@ -74,20 +74,23 @@ jobs:
     - name: Deploy to Azure Container Instances
       run: |
         az container create \
-          --resource-group ${{ env.RESOURCE_GROUP }} \
-          --name ${{ env.CONTAINER_INSTANCE_NAME }} \
-          --image ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-          --registry-login-server ${{ env.REGISTRY_NAME }}.azurecr.io \
-          --registry-username ${{ secrets.ACR_USERNAME }} \
-          --registry-password ${{ secrets.ACR_PASSWORD }} \
-          --dns-name-label snake-royale-${{ github.run_number }} \
-          --ports 3000 \
-          --cpu 2 \
-          --memory 4 \
-          --environment-variables PORT=3000 NODE_ENV=production GITHUB_SHA=${{ github.sha }} \
-          --restart-policy Always \
-          --location swedencentral \
-          --os-type Linux
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_INSTANCE_NAME }} \
+            --image ${{ env.REGISTRY_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --registry-login-server ${{ env.REGISTRY_NAME }}.azurecr.io \
+            --registry-username ${{ secrets.ACR_USERNAME }} \
+            --registry-password ${{ secrets.ACR_PASSWORD }} \
+            --dns-name-label snake-royale-${{ github.run_number }} \
+            --ports 3000 \
+            --cpu 2 \
+            --memory 4 \
+            --environment-variables PORT=3000 NODE_ENV=production GITHUB_SHA=${{ github.sha }} \
+            --restart-policy Always \
+            --location swedencentral \
+            --os-type Linux || {
+                echo "Failed to deploy the container. Check the Azure CLI logs for more details."
+                exit 1
+            }
           
     - name: Wait for container to be ready
       run: |
