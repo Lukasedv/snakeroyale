@@ -403,12 +403,12 @@ class SnakeRoyaleGame {
     render() {
         if (!this.ctx || !this.gameState) return;
         
-        // Clear canvas
-        this.ctx.fillStyle = '#1a1a2e';
+        // Clear canvas with retro black background
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw game area border
-        this.ctx.strokeStyle = '#ffffff';
+        // Draw game area border in retro green
+        this.ctx.strokeStyle = '#00FF00';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.gameState.gameArea.width, this.gameState.gameArea.height);
         
@@ -440,10 +440,10 @@ class SnakeRoyaleGame {
         
         snake.body.forEach((segment, index) => {
             this.ctx.fillStyle = index === 0 ? 
-                (isCurrentPlayer ? '#ffff00' : player.snake.color) : 
+                (isCurrentPlayer ? '#FFFF00' : player.snake.color) : 
                 player.snake.color;
                 
-            // Draw segment
+            // Draw segment as retro square
             this.ctx.fillRect(
                 Math.round(segment.x - 5), 
                 Math.round(segment.y - 5), 
@@ -451,45 +451,47 @@ class SnakeRoyaleGame {
                 10
             );
             
-            // Draw head eyes for the first segment
+            // Add simple border for more retro look
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(
+                Math.round(segment.x - 5), 
+                Math.round(segment.y - 5), 
+                10, 
+                10
+            );
+            
+            // Draw head eyes for the first segment - simple pixels
             if (index === 0) {
                 this.ctx.fillStyle = '#000000';
-                this.ctx.fillRect(Math.round(segment.x - 2), Math.round(segment.y - 2), 2, 2);
-                this.ctx.fillRect(Math.round(segment.x + 1), Math.round(segment.y - 2), 2, 2);
+                this.ctx.fillRect(Math.round(segment.x - 2), Math.round(segment.y - 2), 1, 1);
+                this.ctx.fillRect(Math.round(segment.x + 1), Math.round(segment.y - 2), 1, 1);
             }
         });
         
-        // Draw player name
+        // Draw player name in retro font
         if (snake.body.length > 0) {
             const head = snake.body[0];
-            this.ctx.fillStyle = isNPC ? '#ffaa00' : '#ffffff';
-            this.ctx.font = isNPC ? 'italic 12px Arial' : '12px Arial';
+            this.ctx.fillStyle = isNPC ? '#00FFFF' : '#FFFFFF';
+            this.ctx.font = '12px "Courier New", monospace';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(
-                isNPC ? `🤖 ${player.name}` : player.name, 
+                isNPC ? `BOT ${player.name}` : player.name, 
                 head.x, 
-                head.y - 10
+                head.y - 12
             );
         }
     }
     
     drawFood(food) {
-        // Draw food as a glowing circle
-        this.ctx.fillStyle = '#ff6b6b';
-        this.ctx.shadowColor = '#ff6b6b';
-        this.ctx.shadowBlur = 10;
-        this.ctx.beginPath();
-        this.ctx.arc(food.x, food.y, 8, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw food as a simple retro square
+        this.ctx.fillStyle = '#FFFF00';
+        this.ctx.fillRect(food.x - 6, food.y - 6, 12, 12);
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw inner highlight
-        this.ctx.fillStyle = '#ffaaaa';
-        this.ctx.beginPath();
-        this.ctx.arc(food.x, food.y, 4, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Add simple border
+        this.ctx.strokeStyle = '#FF0000';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(food.x - 6, food.y - 6, 12, 12);
     }
 
     drawSnakeHighlight(player) {
@@ -497,12 +499,10 @@ class SnakeRoyaleGame {
         if (snake.body.length > 0) {
             const head = snake.body[0];
             
-            // Draw highlight circle around player's head
-            this.ctx.strokeStyle = '#ffff00';
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            this.ctx.arc(head.x, head.y, 12, 0, 2 * Math.PI);
-            this.ctx.stroke();
+            // Draw retro square highlight around player's head
+            this.ctx.strokeStyle = '#00FFFF';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(head.x - 8, head.y - 8, 16, 16);
         }
     }
 }
