@@ -12,9 +12,9 @@
         }
         
         body {
-            font-family: 'Arial', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00FF00;
             overflow: hidden;
             touch-action: none;
         }
@@ -35,7 +35,8 @@
         .game-header h1 {
             font-size: 2.5em;
             margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            color: #FFFF00;
+            text-shadow: 2px 2px 0px #FF0000;
         }
         
         .game-info {
@@ -44,10 +45,9 @@
         }
         
         #gameCanvas {
-            border: 3px solid #fff;
-            border-radius: 10px;
-            background: #1a1a2e;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            border: 3px solid #00FF00;
+            border-radius: 0px;
+            background: #000000;
             max-width: 100vw;
             max-height: 60vh;
         }
@@ -63,10 +63,10 @@
         }
         
         .control-btn {
-            background: rgba(255,255,255,0.2);
-            border: 2px solid white;
-            border-radius: 10px;
-            color: white;
+            background: #FFFF00;
+            border: 2px solid #00FF00;
+            border-radius: 0px;
+            color: #000000;
             font-size: 24px;
             font-weight: bold;
             cursor: pointer;
@@ -74,13 +74,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.2s;
             touch-action: manipulation;
         }
         
         .control-btn:hover, .control-btn:active {
-            background: rgba(255,255,255,0.4);
-            transform: scale(0.95);
+            background: #00FFFF;
+            color: #000000;
         }
         
         .control-btn:nth-child(2) { grid-column: 2; grid-row: 1; } /* Up */
@@ -89,61 +88,68 @@
         .control-btn:nth-child(5) { grid-column: 2; grid-row: 3; } /* Down */
         
         .join-form {
-            background: rgba(255,255,255,0.1);
+            background: #000000;
             padding: 30px;
-            border-radius: 15px;
+            border: 3px solid #00FF00;
+            border-radius: 0px;
             text-align: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.2);
         }
         
         .join-form input {
             padding: 12px 20px;
             margin: 10px;
-            border: none;
-            border-radius: 25px;
+            border: 2px solid #00FF00;
+            border-radius: 0px;
             font-size: 16px;
             text-align: center;
             outline: none;
             width: 200px;
+            background: #000000;
+            color: #00FF00;
+            font-family: 'Courier New', monospace;
         }
         
         .join-form button {
             padding: 12px 30px;
             margin: 10px;
-            border: none;
-            border-radius: 25px;
-            background: #4CAF50;
-            color: white;
+            border: 2px solid #00FF00;
+            border-radius: 0px;
+            background: #FFFF00;
+            color: #000000;
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.3s;
+            font-family: 'Courier New', monospace;
         }
         
         .join-form button:hover {
-            background: #45a049;
+            background: #00FFFF;
+            color: #000000;
         }
         
         .game-status {
             position: fixed;
             top: 20px;
             left: 20px;
-            background: rgba(0,0,0,0.7);
+            background: #000000;
+            border: 2px solid #00FF00;
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 0px;
             font-size: 14px;
+            font-family: 'Courier New', monospace;
         }
         
         .leaderboard {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(0,0,0,0.7);
+            background: #000000;
+            border: 2px solid #00FF00;
             padding: 15px;
-            border-radius: 10px;
+            border-radius: 0px;
             font-size: 14px;
             max-width: 200px;
+            font-family: 'Courier New', monospace;
         }
         
         @media (max-width: 768px) {
@@ -176,31 +182,31 @@
         }
         
         .respawn-btn {
-            background: #FF6B6B;
-            color: white;
-            border: none;
+            background: #FF0000;
+            color: #FFFF00;
+            border: 2px solid #FFFF00;
             padding: 10px 20px;
             margin: 10px 0;
-            border-radius: 20px;
+            border-radius: 0px;
             font-size: 14px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
+            font-family: 'Courier New', monospace;
         }
         
         .respawn-btn:hover {
-            background: #FF5252;
-            transform: translateY(-2px);
+            background: #FFFF00;
+            color: #FF0000;
         }
         
         .respawn-btn:disabled {
-            background: #666;
+            background: #333333;
+            color: #666666;
             cursor: not-allowed;
-            transform: none;
         }
         
         #respawnTimer {
-            color: #FFD700;
+            color: #FFFF00;
             font-weight: bold;
             margin: 5px 0;
         }
@@ -208,9 +214,10 @@
         .controls-tooltip {
             margin-top: 10px;
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.8);
+            color: #00FFFF;
             text-align: center;
-            font-style: italic;
+            font-style: normal;
+            font-family: 'Courier New', monospace;
         }
     </style>
 </head>

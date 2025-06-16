@@ -311,19 +311,16 @@ class SpectatorView {
         const scaleX = this.canvas.width / this.gameState.gameArea.width;
         const scaleY = this.canvas.height / this.gameState.gameArea.height;
         
-        // Clear canvas with gradient background
-        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(1, '#16213e');
-        this.ctx.fillStyle = gradient;
+        // Clear canvas with retro black background
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw game area border
-        this.ctx.strokeStyle = '#4ecdc4';
+        // Draw game area border in retro green
+        this.ctx.strokeStyle = '#00FF00';
         this.ctx.lineWidth = 4;
         this.ctx.strokeRect(2, 2, this.canvas.width - 4, this.canvas.height - 4);
         
-        // Draw grid
+        // Draw retro grid
         this.drawGrid();
         
         // Draw food
@@ -349,7 +346,8 @@ class SpectatorView {
     }
     
     drawGrid() {
-        this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        this.ctx.strokeStyle = '#00FF00';
+        this.ctx.globalAlpha = 0.2;
         this.ctx.lineWidth = 1;
         
         const gridSize = 40;
@@ -369,6 +367,8 @@ class SpectatorView {
             this.ctx.lineTo(this.canvas.width, y);
             this.ctx.stroke();
         }
+        
+        this.ctx.globalAlpha = 1.0;
     }
     
     drawFood(food, scaleX, scaleY) {
@@ -376,22 +376,14 @@ class SpectatorView {
         const y = food.y * scaleY;
         const size = 16; // Larger for spectator view
         
-        // Draw food as a glowing circle
-        this.ctx.fillStyle = '#ff6b6b';
-        this.ctx.shadowColor = '#ff6b6b';
-        this.ctx.shadowBlur = 15;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size/2, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw food as a simple retro square
+        this.ctx.fillStyle = '#FFFF00';
+        this.ctx.fillRect(x - size/2, y - size/2, size, size);
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw inner highlight
-        this.ctx.fillStyle = '#ffaaaa';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size/4, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Add simple border
+        this.ctx.strokeStyle = '#FF0000';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x - size/2, y - size/2, size, size);
     }
 
     drawSnake(player, scaleX, scaleY) {
@@ -402,37 +394,38 @@ class SpectatorView {
             const y = segment.y * scaleY;
             const size = 12;
             
-            // Draw segment with glow effect
-            this.ctx.shadowColor = player.snake.color;
-            this.ctx.shadowBlur = 15;
-            this.ctx.fillStyle = index === 0 ? '#ffff00' : player.snake.color;
+            // Draw segment as retro square
+            this.ctx.fillStyle = index === 0 ? '#FFFF00' : player.snake.color;
             this.ctx.fillRect(x - size/2, y - size/2, size, size);
             
-            // Draw head details
+            // Add simple border for retro look
+            this.ctx.strokeStyle = '#000000';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(x - size/2, y - size/2, size, size);
+            
+            // Draw head details - simple pixels
             if (index === 0) {
-                this.ctx.shadowBlur = 0;
                 this.ctx.fillStyle = '#000000';
-                this.ctx.fillRect(x - 3, y - 3, 2, 2);
-                this.ctx.fillRect(x + 1, y - 3, 2, 2);
+                this.ctx.fillRect(x - 3, y - 3, 1, 1);
+                this.ctx.fillRect(x + 1, y - 3, 1, 1);
             }
         });
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw player name with better visibility
+        // Draw player name with retro styling
         if (snake.body.length > 0) {
             const head = snake.body[0];
             const x = head.x * scaleX;
             const y = head.y * scaleY;
             
-            this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            // Simple black background
+            this.ctx.fillStyle = '#000000';
             this.ctx.fillRect(x - 30, y - 25, 60, 16);
             
-            this.ctx.fillStyle = player.isNPC ? '#ffaa00' : '#ffffff';
-            this.ctx.font = player.isNPC ? 'italic bold 12px Arial' : 'bold 12px Arial';
+            // Retro text styling
+            this.ctx.fillStyle = player.isNPC ? '#00FFFF' : '#FFFFFF';
+            this.ctx.font = '12px "Courier New", monospace';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(player.isNPC ? `🤖 ${player.name}` : player.name, x, y - 12);
+            this.ctx.fillText(player.isNPC ? `BOT ${player.name}` : player.name, x, y - 12);
         }
     }
     
