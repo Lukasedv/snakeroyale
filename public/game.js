@@ -403,12 +403,12 @@ class SnakeRoyaleGame {
     render() {
         if (!this.ctx || !this.gameState) return;
         
-        // Clear canvas
-        this.ctx.fillStyle = '#1a1a2e';
+        // Clear canvas with black background
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw game area border
-        this.ctx.strokeStyle = '#ffffff';
+        // Draw game area border - simple green line
+        this.ctx.strokeStyle = '#00ff00';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(0, 0, this.gameState.gameArea.width, this.gameState.gameArea.height);
         
@@ -439,11 +439,12 @@ class SnakeRoyaleGame {
         const isNPC = player.isNPC;
         
         snake.body.forEach((segment, index) => {
+            // Use simple colors - green for player, other colors for others
             this.ctx.fillStyle = index === 0 ? 
                 (isCurrentPlayer ? '#ffff00' : player.snake.color) : 
                 player.snake.color;
                 
-            // Draw segment
+            // Draw segment as simple rectangle
             this.ctx.fillRect(
                 Math.round(segment.x - 5), 
                 Math.round(segment.y - 5), 
@@ -451,7 +452,17 @@ class SnakeRoyaleGame {
                 10
             );
             
-            // Draw head eyes for the first segment
+            // Draw simple border for contrast
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(
+                Math.round(segment.x - 5), 
+                Math.round(segment.y - 5), 
+                10, 
+                10
+            );
+            
+            // Draw head eyes for the first segment - simple pixels
             if (index === 0) {
                 this.ctx.fillStyle = '#000000';
                 this.ctx.fillRect(Math.round(segment.x - 2), Math.round(segment.y - 2), 2, 2);
@@ -459,14 +470,14 @@ class SnakeRoyaleGame {
             }
         });
         
-        // Draw player name
+        // Draw player name in retro style
         if (snake.body.length > 0) {
             const head = snake.body[0];
-            this.ctx.fillStyle = isNPC ? '#ffaa00' : '#ffffff';
-            this.ctx.font = isNPC ? 'italic 12px Arial' : '12px Arial';
+            this.ctx.fillStyle = isNPC ? '#ffff00' : '#ffffff';
+            this.ctx.font = '12px Courier New';
             this.ctx.textAlign = 'center';
             this.ctx.fillText(
-                isNPC ? `🤖 ${player.name}` : player.name, 
+                isNPC ? `BOT:${player.name}` : player.name, 
                 head.x, 
                 head.y - 10
             );
@@ -474,22 +485,14 @@ class SnakeRoyaleGame {
     }
     
     drawFood(food) {
-        // Draw food as a glowing circle
-        this.ctx.fillStyle = '#ff6b6b';
-        this.ctx.shadowColor = '#ff6b6b';
-        this.ctx.shadowBlur = 10;
-        this.ctx.beginPath();
-        this.ctx.arc(food.x, food.y, 8, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw food as a simple yellow square
+        this.ctx.fillStyle = '#ffff00';
+        this.ctx.fillRect(food.x - 5, food.y - 5, 10, 10);
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw inner highlight
-        this.ctx.fillStyle = '#ffaaaa';
-        this.ctx.beginPath();
-        this.ctx.arc(food.x, food.y, 4, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw simple border
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(food.x - 5, food.y - 5, 10, 10);
     }
 
     drawSnakeHighlight(player) {
@@ -497,12 +500,15 @@ class SnakeRoyaleGame {
         if (snake.body.length > 0) {
             const head = snake.body[0];
             
-            // Draw highlight circle around player's head
+            // Draw simple square highlight around player's head
             this.ctx.strokeStyle = '#ffff00';
-            this.ctx.lineWidth = 3;
-            this.ctx.beginPath();
-            this.ctx.arc(head.x, head.y, 12, 0, 2 * Math.PI);
-            this.ctx.stroke();
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(
+                Math.round(head.x - 8), 
+                Math.round(head.y - 8), 
+                16, 
+                16
+            );
         }
     }
 }
