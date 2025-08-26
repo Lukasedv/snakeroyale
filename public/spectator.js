@@ -311,16 +311,13 @@ class SpectatorView {
         const scaleX = this.canvas.width / this.gameState.gameArea.width;
         const scaleY = this.canvas.height / this.gameState.gameArea.height;
         
-        // Clear canvas with gradient background
-        const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
-        gradient.addColorStop(0, '#1a1a2e');
-        gradient.addColorStop(1, '#16213e');
-        this.ctx.fillStyle = gradient;
+        // Clear canvas with solid black background
+        this.ctx.fillStyle = '#000000';
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
-        // Draw game area border
-        this.ctx.strokeStyle = '#4ecdc4';
-        this.ctx.lineWidth = 4;
+        // Draw game area border - simple green line
+        this.ctx.strokeStyle = '#00ff00';
+        this.ctx.lineWidth = 2;
         this.ctx.strokeRect(2, 2, this.canvas.width - 4, this.canvas.height - 4);
         
         // Draw grid
@@ -349,7 +346,7 @@ class SpectatorView {
     }
     
     drawGrid() {
-        this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        this.ctx.strokeStyle = 'rgba(0,255,0,0.1)';
         this.ctx.lineWidth = 1;
         
         const gridSize = 40;
@@ -376,22 +373,14 @@ class SpectatorView {
         const y = food.y * scaleY;
         const size = 16; // Larger for spectator view
         
-        // Draw food as a glowing circle
-        this.ctx.fillStyle = '#ff6b6b';
-        this.ctx.shadowColor = '#ff6b6b';
-        this.ctx.shadowBlur = 15;
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size/2, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw food as a simple yellow square
+        this.ctx.fillStyle = '#ffff00';
+        this.ctx.fillRect(x - size/2, y - size/2, size, size);
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw inner highlight
-        this.ctx.fillStyle = '#ffaaaa';
-        this.ctx.beginPath();
-        this.ctx.arc(x, y, size/4, 0, 2 * Math.PI);
-        this.ctx.fill();
+        // Draw simple border
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeRect(x - size/2, y - size/2, size, size);
     }
 
     drawSnake(player, scaleX, scaleY) {
@@ -402,37 +391,33 @@ class SpectatorView {
             const y = segment.y * scaleY;
             const size = 12;
             
-            // Draw segment with glow effect
-            this.ctx.shadowColor = player.snake.color;
-            this.ctx.shadowBlur = 15;
+            // Draw segment as simple rectangle
             this.ctx.fillStyle = index === 0 ? '#ffff00' : player.snake.color;
             this.ctx.fillRect(x - size/2, y - size/2, size, size);
             
-            // Draw head details
+            // Draw simple border for contrast
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(x - size/2, y - size/2, size, size);
+            
+            // Draw head details - simple pixels
             if (index === 0) {
-                this.ctx.shadowBlur = 0;
                 this.ctx.fillStyle = '#000000';
                 this.ctx.fillRect(x - 3, y - 3, 2, 2);
                 this.ctx.fillRect(x + 1, y - 3, 2, 2);
             }
         });
         
-        // Reset shadow
-        this.ctx.shadowBlur = 0;
-        
-        // Draw player name with better visibility
+        // Draw player name in retro style
         if (snake.body.length > 0) {
             const head = snake.body[0];
             const x = head.x * scaleX;
             const y = head.y * scaleY;
             
-            this.ctx.fillStyle = 'rgba(0,0,0,0.7)';
-            this.ctx.fillRect(x - 30, y - 25, 60, 16);
-            
-            this.ctx.fillStyle = player.isNPC ? '#ffaa00' : '#ffffff';
-            this.ctx.font = player.isNPC ? 'italic bold 12px Arial' : 'bold 12px Arial';
+            this.ctx.fillStyle = player.isNPC ? '#ffff00' : '#ffffff';
+            this.ctx.font = '12px Courier New';
             this.ctx.textAlign = 'center';
-            this.ctx.fillText(player.isNPC ? `🤖 ${player.name}` : player.name, x, y - 12);
+            this.ctx.fillText(player.isNPC ? `BOT:${player.name}` : player.name, x, y - 12);
         }
     }
     
